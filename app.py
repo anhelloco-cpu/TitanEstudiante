@@ -122,7 +122,7 @@ if archivo:
             # Radar Chart estilizado
             fig = px.line_polar(df_adn, r='Puntaje', theta='Área', line_close=True, range_r=[0,5])
             fig.update_traces(fill='toself', line_color=color_rango)
-            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color="white")
+            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color="black")
             st.plotly_chart(fig, use_container_width=True)
 
 

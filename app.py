@@ -4,94 +4,82 @@ import plotly.express as px
 import google.generativeai as genai
 import json
 
-# 1. --- CONFIGURACIÓN DE LA PÁGINA ---
+# --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Titán Estudiante - Dashboard", layout="wide", page_icon="🛡️")
 
-# Inicializar estados
+# Memoria del Titán
 if 'view' not in st.session_state: st.session_state['view'] = 'dashboard'
 if 'mision_ia' not in st.session_state: st.session_state['mision_ia'] = ""
 if 'df_adn' not in st.session_state: st.session_state['df_adn'] = None
 
-# --- 2. ESTILOS VISUALES (Fondo Blanco) ---
+# --- ESTILOS (Blanco y Profesional) ---
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; color: #2b2d33; }
     [data-testid="stSidebar"] { background-color: #f7f7f7; }
-    .stMetric { background-color: #f7f7f7; border: 1px solid #d1d5db; padding: 10px; border-radius: 12px; }
+    .stMetric { background-color: #ffffff; border: 1px solid #d1d5db; padding: 10px; border-radius: 12px; }
     .alerta-daño { color: #ff4b4b; font-weight: bold; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-    .pergamino { background-color: #fff9eb; color: #2b2d33; padding: 25px; border-radius: 10px; border: 1px solid #d4af37; border-left: 8px solid #d4af37; }
+    .pergamino { background-color: #fffcf5; color: #2b2d33; padding: 25px; border-radius: 10px; border: 1px solid #d4af37; border-left: 8px solid #d4af37; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. CONEXIÓN AL ORÁCULO (IA) ---
+# --- CONEXIÓN AL ORÁCULO ---
 with st.sidebar:
     st.header("🔑 Conexión IA")
     user_api_key = st.text_input("Pega tu API Key de Gemini:", type="password", key="key_input")
     if user_api_key:
         try:
             genai.configure(api_key=user_api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            # Solución al 404: Intentar nombres alternativos del modelo
+            try:
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                model.generate_content("test") # Prueba de vida
+            except:
+                model = genai.GenerativeModel('models/gemini-1.5-flash')
             st.success("Oráculo Conectado")
         except Exception as e:
-            st.error(f"Error: {e}")
+            st.error(f"Error de conexión: {e}")
 
-# --- 4. MOTOR DE ADN INTELIGENTE (IA DESCIFRANDO EL EXCEL) ---
-def procesar_adn_con_ia(file):
-    if not user_api_key:
-        st.error("Debes conectar la API Key para que la IA descifre este archivo.")
-        return None
-
+# --- MOTOR DE ADN INTELIGENTE (Descifrador de formatos) ---
+def descifrar_adn_con_ia(file):
+    if not user_api_key: return None
     try:
-        # Leemos las primeras filas para que la IA entienda el formato
         df_raw = pd.read_excel(file)
-        # Convertimos una muestra de los datos a texto para la IA
-        data_sample = df_raw.head(20).to_csv(index=False)
-        column_names = list(df_raw.columns)
-
+        # Enviamos una muestra real del Excel para que la IA entienda el formato
+        data_preview = df_raw.head(15).to_csv(index=False)
+        
         prompt = f"""
-        Actúa como un experto en analítica educativa. Te voy a pasar una muestra de datos de un estudiante:
-        COLUMNAS: {column_names}
-        DATOS: {data_sample}
+        Eres el 'Decodificador de ADN Académico'. Analiza esta muestra de un archivo de notas:
+        {data_preview}
 
         TAREA:
-        1. Identifica qué columnas o filas corresponden a estas 5 áreas del ICFES: 
-           Matemáticas, Lectura Crítica, Ciencias Naturales, Sociales y Ciudadanas, Inglés.
-        2. Calcula el puntaje promedio para cada área.
-        3. IMPORTANTE: Si el archivo usa escala 0-100 o 0-500, normalízalo a escala de 0.0 a 5.0.
-        4. Devuelve ÚNICAMENTE un JSON con este formato:
+        1. Identifica las notas de: Matemáticas, Lectura Crítica, Ciencias Naturales, Sociales y Ciudadanas, Inglés.
+        2. Detecta la escala: Si es 0-500 (ICFES), 0-100 o 0-5.
+        3. Normaliza todo a una escala de 0.0 a 5.0 (Donde 5.0 es perfecto).
+        4. Devuelve un JSON puro (sin texto extra) así:
         [
           {{"Área": "Matemáticas", "Puntaje": 4.2}},
-          ...
+          ... (las 5 áreas)
         ]
         """
-        
         response = model.generate_content(prompt)
-        # Limpiar la respuesta de la IA (quitar bloques de código si los hay)
+        # Limpieza de formato JSON
         clean_json = response.text.replace('```json', '').replace('```', '').strip()
-        adn_list = json.loads(clean_json)
+        adn_data = json.loads(clean_json)
         
-        # Enriquecer los datos para el resto de la app
-        mapeo_p = {"Matemáticas": "Peto", "Lectura Crítica": "Yelmo", "Ciencias Naturales": "Grebas", "Sociales y Ciudadanas": "Escudo", "Inglés": "Guantelete"}
-        for item in adn_list:
-            item["Pieza"] = mapeo_p.get(item["Área"], "Accesorio")
-            item["Estado"] = "Oro" if item["Puntaje"] >= 4.5 else "Plata" if item["Puntaje"] >= 3.8 else "Bronce"
-            item["Salud"] = int((item["Puntaje"] / 5) * 100)
-
-        return pd.DataFrame(adn_list)
+        # Mapeo de piezas medievales
+        mapeo = {"Matemáticas": "Peto", "Lectura Crítica": "Yelmo", "Ciencias Naturales": "Grebas", "Sociales y Ciudadanas": "Escudo", "Inglés": "Guantelete"}
+        for i in adn_data:
+            i["Pieza"] = mapeo.get(i["Área"], "Accesorio")
+            i["Estado"] = "Oro" if i["Puntaje"] >= 4.5 else "Plata" if i["Puntaje"] >= 3.8 else "Bronce"
+            i["Salud"] = int((i["Puntaje"] / 5) * 100)
+        return pd.DataFrame(adn_data)
     except Exception as e:
-        st.error(f"El Titán no pudo descifrar el ADN: {e}")
+        st.error(f"El Titán no pudo leer este pergamino: {e}")
         return None
 
-def generar_mision_con_ia(area):
-    prompt = f"Genera un reto ICFES de {area} con texto, pregunta A,B,C,D y explicación técnica."
-    try:
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        return f"Fallo en la forja: {e}"
-
-# --- 5. NAVEGACIÓN ---
+# --- NAVEGACIÓN ---
 if st.session_state['view'] == 'mision':
     st.markdown("## ⚒️ FORJA DE REPARACIÓN")
     st.markdown(f'<div class="pergamino">{st.session_state["mision_ia"]}</div>', unsafe_allow_html=True)
@@ -101,27 +89,19 @@ if st.session_state['view'] == 'mision':
 
 else:
     st.title("🛡️ TITÁN ESTUDIANTE: El Despertar")
-    st.markdown("---")
-    archivo = st.file_uploader("Cargue el archivo de Notas (Cualquier formato)", type=["xlsx"])
+    archivo = st.file_uploader("Cargue el archivo de Notas (ICFES o Colegio)", type=["xlsx"])
 
     if archivo:
-        # Solo procesamos si los datos no han sido cargados o es un archivo nuevo
         if st.session_state['df_adn'] is None:
-            with st.spinner("La IA está descifrando el ADN Académico..."):
-                st.session_state['df_adn'] = procesar_adn_con_ia(archivo)
+            with st.spinner("La IA está descifrando el ADN..."):
+                st.session_state['df_adn'] = descifrar_adn_con_ia(archivo)
         
         df_adn = st.session_state['df_adn']
-        
         if df_adn is not None:
             promedio_gral = df_adn['Puntaje'].mean()
-            
-            # Avatar y Rango
-            if promedio_gral >= 4.5: rango, color_r = "TITÁN LEGENDARIO", "#d4af37"
-            elif promedio_gral >= 3.8: rango, color_r = "GUERRERO VETERANO", "#7f8c8d"
-            else: rango, color_r = "RECLUTA EN FORJA", "#a0522d"
+            color_r = "#d4af37" if promedio_gral >= 4.5 else "#7f8c8d" if promedio_gral >= 3.8 else "#a0522d"
             
             with st.sidebar:
-                st.markdown(f"<h1 style='text-align: center; color: {color_r};'>{rango}</h1>", unsafe_allow_html=True)
                 st.image("https://www.freepik.com/premium-psd/ornate-medieval-armor-knights-cuirass_412654456.htm", use_column_width=True)
                 st.metric("PODER TOTAL", round(promedio_gral, 2))
 
@@ -129,14 +109,14 @@ else:
             with col1:
                 st.subheader("⚔️ Inventario de Armadura")
                 for _, row in df_adn.iterrows():
-                    color_txt = "#ff4b4b" if row['Estado'] == "Bronce" else "#00262e"
-                    alerta = " | <span class='alerta-daño'>¡PIEZA DAÑADA!</span>" if row['Estado'] == "Bronce" else f" | Nivel {row['Estado']}"
-                    st.markdown(f"<span style='color: {color_txt};'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}**</span>{alerta}", unsafe_allow_html=True)
+                    c_txt = "#ff4b4b" if row['Estado'] == "Bronce" else "#00262e"
+                    status = "¡DAÑADA!" if row['Estado'] == "Bronce" else row['Estado']
+                    st.markdown(f"<span style='color: {c_txt};'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}**</span> | {status}", unsafe_allow_html=True)
                     st.progress(row['Salud'] / 100)
-                
+
                 fig = px.line_polar(df_adn, r='Puntaje', theta='Área', line_close=True, range_r=[0,5])
                 fig.update_traces(fill='toself', line_color=color_r)
-                fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", polar=dict(bgcolor="white"))
+                fig.update_layout(polar=dict(bgcolor="white"), paper_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig, use_container_width=True)
 
             with col2:
@@ -144,16 +124,14 @@ else:
                 vulnerables = df_adn[df_adn['Puntaje'] < 3.8]
                 if not vulnerables.empty:
                     for _, row in vulnerables.iterrows():
-                        st.error(f"⚠️ **Debilidad:** {row['Pieza']} ({row['Área']})")
+                        st.error(f"⚠️ Punto de Quiebre: {row['Pieza']} ({row['Área']})")
                     
-                    st.divider()
-                    st.subheader("⚒️ Taller de Mentores")
-                    mas_critica = vulnerables.loc[vulnerables['Puntaje'].idxmin()]
-                    
-                    if st.button(f"🔥 Forjar Reparación: {mas_critica['Área']}"):
-                        with st.spinner("Generando desafío personalizado..."):
-                            st.session_state['mision_ia'] = generar_mision_con_ia(mas_critica['Área'])
+                    if st.button("🔥 Forjar Reparación"):
+                        with st.spinner("Creando misión personalizada..."):
+                            area = vulnerables.loc[vulnerables['Puntaje'].idxmin()]['Área']
+                            res = model.generate_content(f"Crea un reto ICFES de {area} con texto y pregunta A,B,C,D.")
+                            st.session_state['mision_ia'] = res.text
                             st.session_state['view'] = 'mision'
                             st.rerun()
                 else:
-                    st.success("✅ Integridad Total.")
+                    st.success("✅ Armadura Integra. ¡Eres un Titán!")

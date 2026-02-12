@@ -6,12 +6,13 @@ import json
 import re
 
 # 1. --- CONFIGURACIÓN DE LA PÁGINA ---
-st.set_page_config(page_title="TITÁN ESTUDIANTE v113", layout="wide", page_icon="🛡️")
+st.set_page_config(page_title="TITÁN ESTUDIANTE v115", layout="wide", page_icon="🛡️")
 
 # Inicializar estados de persistencia
 if 'view' not in st.session_state: st.session_state['view'] = 'dashboard'
 if 'df_adn' not in st.session_state: st.session_state['df_adn'] = None
 if 'df_historico' not in st.session_state: st.session_state['df_historico'] = None
+if 'resumen_ia' not in st.session_state: st.session_state['resumen_ia'] = ""
 if 'diagnostico_detallado' not in st.session_state: st.session_state['diagnostico_detallado'] = ""
 if 'mision_data' not in st.session_state: st.session_state['mision_data'] = None
 if 'progreso_mision' not in st.session_state:
@@ -36,14 +37,19 @@ st.markdown("""
         font-size: 1.1em; line-height: 1.6;
     }
 
-    /* Caja de diagnóstico organizada con párrafos claros */
-    .diagnostico-caja {
-        background-color: #f8fafc; border-radius: 12px; padding: 25px;
-        border: 1px solid #e2e8f0; border-left: 6px solid #1e293b;
-        margin-bottom: 20px; font-size: 1.05em; line-height: 1.8;
-        color: #1e293b;
+    /* Caja de Resumen Épico */
+    .resumen-caja {
+        background-color: #f8fafc; border-radius: 12px; padding: 20px;
+        border: 1px solid #e2e8f0; border-left: 6px solid #d4af37;
+        margin-bottom: 15px; font-size: 1.1em; line-height: 1.6;
+        color: #1e293b; font-weight: 500;
     }
-    .diagnostico-caja p { margin-bottom: 15px; }
+
+    /* Estilo para el diagnóstico detallado dentro del expander */
+    .diagnostico-full {
+        font-size: 1em; line-height: 1.8; color: #334155;
+        white-space: pre-wrap;
+    }
 
     .alerta-daño { color: #ff4b4b; font-weight: bold; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
@@ -52,44 +58,52 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. FUNCIONES DE IA (Cerebro del Titán con Análisis de Tendencias) ---
+# --- 3. FUNCIONES DE IA (Cerebro del Titán con Mapeo de Armadura) ---
 def procesar_adn_ia(file):
     if 'model' not in st.session_state: return None
     try:
         df_raw = pd.read_excel(file)
         csv_full_sample = df_raw.head(50).to_csv(index=False)
         
-        prompt = f"""Analiza estos registros académicos con múltiples periodos (AP1, AP2, AP3, AP4):
+        prompt = f"""Analiza estos registros académicos con periodos AP1, AP2, AP3, AP4:
         {csv_full_sample}
         
-        TAREA:
-        1. Identifica las 5 áreas ICFES (Matemáticas, Lectura Crítica, Ciencias Naturales, Sociales, Inglés).
-        2. Calcula el promedio actual (normalizado a 0.0-5.0).
-        3. Realiza un DIAGNÓSTICO MAESTRO:
-           - Cada materia analizada DEBE estar en su propio párrafo independiente.
-           - Usa un tono épico pero técnico.
-           - Identifica si el estudiante ha mejorado o decaído en cada una comparando los periodos.
-           - Usa iconos (📈, 📉, 🛡️) al inicio de cada párrafo.
-        4. Genera datos para una gráfica de tendencia (Puntaje por Área en cada Periodo).
+        MAPEO DE ARMADURA:
+        - Yelmo: Lectura Crítica
+        - Peto: Matemáticas
+        - Grebas: Ciencias Naturales
+        - Escudo: Sociales y Ciudadanas
+        - Guantelete: Inglés
 
-        Devuelve UNICAMENTE un JSON con esta estructura exacta:
+        TAREA:
+        1. Calcula promedios actuales (0.0-5.0).
+        2. Genera un "resumen_epico": Una sola frase potente sobre el estado general de la armadura.
+        3. Realiza un "diagnostico_maestro": 
+           - UN PÁRRAFO POR PIEZA DE ARMADURA.
+           - Menciona la materia y la tendencia histórica (AP1 vs Último AP).
+           - Usa iconos: 🛡️ (Estable), 📈 (Mejorando), 📉 (Dañada).
+        4. Genera datos para gráfica de tendencia.
+
+        Devuelve UNICAMENTE un JSON:
         {{
             "tabla": [ {{"Área": "Materia", "Puntaje": 4.2}}, ... ],
-            "diagnostico_master": "Párrafo 1... \\n\\n Párrafo 2... \\n\\n Párrafo 3...",
-            "historico": [ {{"Periodo": "AP1", "Área": "Matemáticas", "Puntaje": 4.0}}, ... ]
+            "resumen_epico": "Tu armadura brilla...",
+            "diagnostico_master": "🛡️ YELMO (Lectura Crítica): ...\\n\\n🛡️ PETO (Matemáticas): ...",
+            "historico": [ {{"Periodo": "AP1", "Área": "Materia", "Puntaje": 4.0}}, ... ]
         }}
         """
         response = st.session_state['model'].generate_content(prompt)
         match = re.search(r'\{.*\}', response.text, re.DOTALL)
         data_packet = json.loads(match.group())
         
+        st.session_state['resumen_ia'] = data_packet['resumen_epico']
         st.session_state['diagnostico_detallado'] = data_packet['diagnostico_master']
         st.session_state['df_historico'] = pd.DataFrame(data_packet['historico'])
         
         adn_list = data_packet['tabla']
-        mapeo = {"Matemáticas": "Peto", "Lectura Crítica": "Yelmo", "Ciencias Naturales": "Grebas", "Sociales y Ciudadanas": "Escudo", "Inglés": "Guantelete"}
+        mapeo_piezas = {"Matemáticas": "Peto", "Lectura Crítica": "Yelmo", "Ciencias Naturales": "Grebas", "Sociales y Ciudadanas": "Escudo", "Inglés": "Guantelete"}
         for i in adn_list:
-            i["Pieza"] = mapeo.get(i["Área"], "Accesorio")
+            i["Pieza"] = mapeo_piezas.get(i["Área"], "Accesorio")
             i["Estado"] = "Oro" if i["Puntaje"] >= 4.5 else "Plata" if i["Puntaje"] >= 3.8 else "Bronce"
             i["Salud"] = int((i["Puntaje"] / 5) * 100)
         return pd.DataFrame(adn_list)
@@ -98,9 +112,8 @@ def procesar_adn_ia(file):
         return None
 
 def generar_mision_ia(area):
-    prompt = f"""Genera un caso de análisis tipo ICFES para {area}.
-    Luego genera 3 preguntas de selección múltiple basadas en ese caso.
-    Devuelve un JSON puro: {{ "caso": "texto...", "preguntas": [ {{"enunciado": "...", "opciones": {{"A":"...", "B":"...", "C":"...", "D":"..."}}, "correcta": "letra"}}, ... ] }}"""
+    prompt = f"""Genera un caso tipo ICFES para {area} y 3 preguntas A,B,C,D. 
+    Devuelve JSON: {{ "caso": "...", "preguntas": [ {{"enunciado": "...", "opciones": {{"A":"..."}}, "correcta": "letra"}}, ... ] }}"""
     try:
         res = st.session_state['model'].generate_content(prompt)
         match = re.search(r'\{.*\}', res.text, re.DOTALL)
@@ -184,7 +197,7 @@ else:
 
     if archivo:
         if st.session_state['df_adn'] is None:
-            with st.spinner("Analizando ADN y Tendencias..."):
+            with st.spinner("Analizando ADN y Estado de Armadura..."):
                 st.session_state['df_adn'] = procesar_adn_ia(archivo)
         
         df = st.session_state['df_adn']
@@ -207,39 +220,43 @@ else:
                 st.plotly_chart(fig, use_container_width=True)
 
             with col2:
-                st.subheader("🧠 Diagnóstico del Oráculo")
-                # Diagnóstico organizado por párrafos
+                st.subheader("🧠 El Oráculo de la Armadura")
+                
+                # --- CAPA 1: RESUMEN ÉPICO ---
+                if st.session_state['resumen_ia']:
+                    st.markdown(f"<div class='resumen-caja'>✨ {st.session_state['resumen_ia']}</div>", unsafe_allow_html=True)
+
+                # --- CAPA 2: DIAGNÓSTICO DETALLADO (DESPLEGABLE) ---
                 if st.session_state['diagnostico_detallado']:
-                    st.markdown(f"<div class='diagnostico-caja'>{st.session_state['diagnostico_detallado']}</div>", unsafe_allow_html=True)
+                    with st.expander("🔍 VER ESTADO TÉCNICO DE LAS PIEZAS", expanded=False):
+                        st.markdown(f"<div class='diagnostico-full'>{st.session_state['diagnostico_detallado']}</div>", unsafe_allow_html=True)
+                        
+                        # --- GRÁFICA DE TENDENCIA DENTRO DEL DESPLEGABLE ---
+                        if st.session_state['df_historico'] is not None:
+                            st.divider()
+                            st.markdown("#### 📈 Evolución Histórica")
+                            fig_trend = px.line(st.session_state['df_historico'], x="Periodo", y="Puntaje", color="Área", markers=True)
+                            fig_trend.update_layout(
+                                plot_bgcolor="white", paper_bgcolor="rgba(0,0,0,0)", height=300,
+                                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                            )
+                            st.plotly_chart(fig_trend, use_container_width=True)
 
-                # --- GRÁFICA DE TENDENCIA POR PERIODOS ---
-                if st.session_state['df_historico'] is not None:
-                    st.markdown("#### 📈 Evolución por Periodos")
-                    fig_trend = px.line(st.session_state['df_historico'], x="Periodo", y="Puntaje", color="Área", markers=True)
-                    fig_trend.update_layout(
-                        plot_bgcolor="white", 
-                        paper_bgcolor="rgba(0,0,0,0)", 
-                        height=350, 
-                        yaxis_range=[0,5.2],
-                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-                    )
-                    st.plotly_chart(fig_trend, use_container_width=True)
-
+                st.divider()
                 vulnerables = df[df['Puntaje'] < 3.8]
                 if not vulnerables.empty:
-                    st.divider()
                     mas_debil = vulnerables.loc[vulnerables['Puntaje'].idxmin()]
                     for _, row in vulnerables.iterrows():
                         if row['Área'] == mas_debil['Área']:
-                            st.error(f"🚨 **PRIORIDAD:** Tu {row['Pieza']} requiere forja urgente.")
+                            st.error(f"🚨 **PRIORIDAD:** El {row['Pieza']} requiere forja inmediata.")
                         else:
-                            st.warning(f"⚠️ **VULNERABLE:** Tu {row['Pieza']} tiene fisuras.")
+                            st.warning(f"⚠️ **VULNERABLE:** El {row['Pieza']} tiene fisuras.")
                     
                     st.divider()
                     st.subheader("⚒️ Taller de Mentores")
                     if st.button(f"🔥 Forjar Reparación: {mas_debil['Pieza'].upper()}"):
                         if 'model' in st.session_state:
-                            with st.spinner("Generando 3 desafíos..."):
+                            with st.spinner("Generando 3 desafíos interactivos..."):
                                 st.session_state.mision_data = generar_mision_ia(mas_debil['Área'])
                                 st.session_state.area_reparar = mas_debil['Área']
                                 st.session_state.view = 'mision'

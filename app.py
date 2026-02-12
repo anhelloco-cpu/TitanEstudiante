@@ -6,13 +6,13 @@ import google.generativeai as genai
 # 1. --- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Titán Estudiante - Dashboard", layout="wide", page_icon="🛡️")
 
-# Inicializar estados de la IA (Para no perder la navegación)
+# Inicializar estados de la IA
 if 'view' not in st.session_state:
     st.session_state['view'] = 'dashboard'
 if 'mision_ia' not in st.session_state:
     st.session_state['mision_ia'] = ""
 
-# --- 2. ESTILOS VISUALES (Fondo Blanco y Colores Solicitados) ---
+# --- 2. ESTILOS VISUALES (Fondo Blanco y Letras Oscuras) ---
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; color: #2b2d33; }
@@ -24,19 +24,20 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. LÓGICA DE LA IA TITÁN (Conexión Corregida) ---
+# --- 3. LÓGICA DE LA IA TITÁN (Conexión) ---
 with st.sidebar:
     st.header("🔑 Conexión IA")
     user_api_key = st.text_input("Pega tu API Key de Gemini:", type="password")
     if user_api_key:
         try:
             genai.configure(api_key=user_api_key)
-            # Usamos el modelo con el nombre técnico correcto
+            # Usamos el modelo con el nombre correcto para evitar el error 404
             model = genai.GenerativeModel('gemini-1.5-flash')
             st.success("IA Conectada")
         except Exception as e:
             st.error(f"Error de configuración: {e}")
 
+# --- FUNCIÓN GENERADORA (CORREGIDA LA IDENTACIÓN AQUÍ) ---
 def generar_mision_con_ia(area):
     if not user_api_key: 
         return "❌ Error: No has ingresado la API Key en la barra lateral."
@@ -52,6 +53,7 @@ def generar_mision_con_ia(area):
     """
     
     try:
+        # Todo este bloque está dentro de la función (8 espacios de indentación)
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
@@ -105,11 +107,10 @@ else:
             promedio_gral = df_adn['Puntaje'].mean()
             
             # Lógica de Avatar
-            if promedio_gral >= 4.5: rango, color_r = "TITÁN LEGENDARIO", "#FFD700"
-            elif promedio_gral >= 3.8: rango, color_r = "GUERRERO VETERANO", "#C0C0C0"
-            else: rango, color_r = "RECLUTA EN FORJA", "#CD7F32"
+            if promedio_gral >= 4.5: rango, color_r = "TITÁN LEGENDARIO", "#d4af37"
+            elif promedio_gral >= 3.8: rango, color_r = "GUERRERO VETERANO", "#7f8c8d"
+            else: rango, color_r = "RECLUTA EN FORJA", "#a0522d"
             
-            # Nota: Usa el link directo a la imagen si este no carga
             img_url = "https://www.freepik.com/premium-psd/ornate-medieval-armor-knights-cuirass_412654456.htm"
 
             with st.sidebar:
@@ -146,6 +147,7 @@ else:
                     st.markdown("---")
                     st.subheader("⚒️ Taller de Mentores")
                     mas_critica = vulnerables.loc[vulnerables['Puntaje'].idxmin()]
+                    
                     if st.button(f"🔥 Forjar Reparación: {mas_critica['Área']}"):
                         if user_api_key:
                             with st.spinner("IA generando reto real..."):
@@ -160,4 +162,3 @@ else:
                 st.subheader("🏆 Gesta del Clan")
                 st.write("**Meta Grupal:** Salida a Cine")
                 st.progress(65)
-                st.caption("Falta un 35% de esfuerzo colectivo.")

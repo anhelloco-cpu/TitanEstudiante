@@ -72,4 +72,49 @@ uploaded_file = st.file_uploader("Arrastra aquí el Excel de notas", type=["xlsx
 
 if uploaded_file:
     with st.spinner('Titán está analizando el ADN...'):
-        df_
+        df_adn = procesar_adn(uploaded_file)
+    
+    if df_adn is not None and not df_adn.empty:
+        st.success("¡ADN Extraído con éxito!")
+        
+        # --- DASHBOARD ---
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            st.subheader("Estado de la Armadura")
+            for _, row in df_adn.iterrows():
+                # Color rojo si es nivel Bronce (menos de 3.8)
+                delta_color = "normal" if row['Puntaje'] >= 3.8 else "inverse"
+                st.metric(
+                    label=f"{row['Pieza']} ({row['Área']})", 
+                    value=row['Puntaje'], 
+                    delta=row['Estado'], 
+                    delta_color=delta_color
+                )
+
+        with col2:
+            st.subheader("Radar de Competencias")
+            fig = px.line_polar(df_adn, r='Puntaje', theta='Área', line_close=True, range_r=[0,5])
+            fig.update_traces(fill='toself', line_color='#00D4FF')
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+        
+        # --- MENTORES Y PROTECTORES ---
+        c1, c2, c3 = st.columns(3)
+        
+        with c1:
+            # Detectar el área más baja para la misión
+            area_debil = df_adn.loc[df_adn['Puntaje'].idxmin()]
+            st.info(f"⚒️ **Taller de Mentores**\n\nDebilidad detectada en: **{area_debil['Área']}**")
+            if st.button("Generar Misión de Refuerzo"):
+                st.write(f"Generando misiones para reparar el {area_debil['Pieza']}...")
+
+        with c2:
+            st.warning("🏰 **Protectores del Santuario**\n\nIncentivo Grupal: Tarde de Pizza\nProgreso: 65%")
+            
+        with c3:
+            st.success("👥 **Gestión de Escuadrones**\n\n3 Escuadrones activos reparando el Peto de Matemáticas.")
+
+else:
+    st.info("Por favor, cargue un archivo Excel para iniciar el diagnóstico.")

@@ -6,54 +6,54 @@ import google.generativeai as genai
 # 1. --- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Titán Estudiante - Dashboard", layout="wide", page_icon="🛡️")
 
-# Inicializar estados de la IA
+# Inicializar estados de navegación y de la IA
 if 'view' not in st.session_state:
     st.session_state['view'] = 'dashboard'
 if 'mision_ia' not in st.session_state:
     st.session_state['mision_ia'] = ""
 
-# --- 2. ESTILOS VISUALES (Fondo Blanco y Letras Oscuras) ---
+# --- 2. ESTILOS VISUALES (Blanco y Limpio) ---
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; color: #2b2d33; }
     [data-testid="stSidebar"] { background-color: #f7f7f7; }
-    .stMetric { background-color: #f7f7f7; border: 1px solid #3d4156; padding: 10px; border-radius: 12px; }
+    .stMetric { background-color: #f7f7f7; border: 1px solid #d1d5db; padding: 10px; border-radius: 12px; }
     .alerta-daño { color: #ff4b4b; font-weight: bold; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
     .pergamino { background-color: #fff9eb; color: #2b2d33; padding: 25px; border-radius: 10px; border: 1px solid #d4af37; border-left: 8px solid #d4af37; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. LÓGICA DE LA IA TITÁN (Conexión) ---
+# --- 3. LÓGICA DE CONEXIÓN IA ---
 with st.sidebar:
     st.header("🔑 Conexión IA")
-    user_api_key = st.text_input("Pega tu API Key de Gemini:", type="password")
+    # Usamos session_state para que la llave no se borre al recargar
+    user_api_key = st.text_input("Pega tu API Key de Gemini:", type="password", key="gemini_key")
     if user_api_key:
-        try:
-            genai.configure(api_key=user_api_key)
-            # Usamos el modelo con el nombre correcto para evitar el error 404
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            st.success("IA Conectada")
-        except Exception as e:
-            st.error(f"Error de configuración: {e}")
+        st.success("Llave detectada. ¡Listo para forjar!")
 
-# --- FUNCIÓN GENERADORA (CORREGIDA LA IDENTACIÓN AQUÍ) ---
+# --- FUNCIÓN GENERADORA BLINDADA ---
 def generar_mision_con_ia(area):
-    if not user_api_key: 
+    if not st.session_state.get("gemini_key"): 
         return "❌ Error: No has ingresado la API Key en la barra lateral."
     
-    prompt = f"""
-    Eres el Titán Protector, experto en el examen ICFES Saber 11 de Colombia.
-    Analiza la debilidad en {area}. 
-    Genera una misión de entrenamiento real basada en la complejidad de los cuadernillos 2024/2025:
-    1. Un texto de análisis técnico o literario.
-    2. Una pregunta de selección múltiple (A, B, C, D).
-    3. Respuesta correcta y una breve explicación técnica.
-    Usa un lenguaje motivador de guerrero.
-    """
-    
     try:
-        # Todo este bloque está dentro de la función (8 espacios de indentación)
+        # Configuramos la IA justo antes de usarla para evitar errores de conexión
+        genai.configure(api_key=st.session_state["gemini_key"])
+        
+        # Intentamos con el modelo más compatible
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        prompt = f"""
+        Actúa como el Titán Protector, experto en el examen ICFES Saber 11 de Colombia.
+        Analiza la debilidad en {area}. 
+        Genera una misión de entrenamiento real basada en la complejidad de los cuadernillos 2024/2025:
+        1. Un texto de análisis técnico o literario.
+        2. Una pregunta de selección múltiple (A, B, C, D).
+        3. Respuesta correcta y una breve explicación técnica.
+        Usa un lenguaje motivador de guerrero y asegúrate de que el texto sea claro.
+        """
+        
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
@@ -99,14 +99,14 @@ else:
     # --- INTERFAZ DASHBOARD ---
     st.title("🛡️ TITÁN ESTUDIANTE: El Despertar")
     st.markdown("---")
-    archivo = st.file_uploader("Cargue el Excel de Notas para despertar al Titán", type=["xlsx"])
+    archivo = st.file_uploader("Cargue el Excel de Notas", type=["xlsx"])
 
     if archivo:
         df_adn = procesar_adn(archivo)
         if df_adn is not None:
             promedio_gral = df_adn['Puntaje'].mean()
             
-            # Lógica de Avatar
+            # Rangos de Avatar
             if promedio_gral >= 4.5: rango, color_r = "TITÁN LEGENDARIO", "#d4af37"
             elif promedio_gral >= 3.8: rango, color_r = "GUERRERO VETERANO", "#7f8c8d"
             else: rango, color_r = "RECLUTA EN FORJA", "#a0522d"
@@ -125,10 +125,10 @@ else:
             with col1:
                 st.subheader("⚔️ Inventario de Armadura")
                 for _, row in df_adn.iterrows():
-                    if row['Estado'] == "Bronce":
-                        st.markdown(f"<span style='color: #00262e;'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}**</span> | <span class='alerta-daño'>¡PIEZA DAÑADA!</span>", unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"<span style='color: #00262e;'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | Nivel {row['Estado']}</span>", unsafe_allow_html=True)
+                    color_t = "#ff4b4b" if row['Estado'] == "Bronce" else "#00262e"
+                    alerta = " | <span class='alerta-daño'>¡PIEZA DAÑADA!</span>" if row['Estado'] == "Bronce" else f" | Nivel {row['Estado']}"
+                    
+                    st.markdown(f"<span style='color: {color_t};'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}**</span>{alerta}", unsafe_allow_html=True)
                     st.progress(row['Salud'] / 100)
                 
                 st.divider()
@@ -142,23 +142,19 @@ else:
                 vulnerables = df_adn[df_adn['Puntaje'] < 3.8]
                 if not vulnerables.empty:
                     for _, row in vulnerables.iterrows():
-                        st.error(f"⚠️ **Punto de Quiebre:** Tu {row['Pieza']} ({row['Área']}) está vulnerable.")
+                        st.error(f"⚠️ **Debilidad:** {row['Pieza']} ({row['Área']})")
                     
-                    st.markdown("---")
+                    st.divider()
                     st.subheader("⚒️ Taller de Mentores")
                     mas_critica = vulnerables.loc[vulnerables['Puntaje'].idxmin()]
                     
                     if st.button(f"🔥 Forjar Reparación: {mas_critica['Área']}"):
-                        if user_api_key:
-                            with st.spinner("IA generando reto real..."):
+                        if st.session_state.get("gemini_key"):
+                            with st.spinner("El Titán está forjando tu reto..."):
                                 st.session_state['mision_ia'] = generar_mision_con_ia(mas_critica['Área'])
                                 st.session_state['view'] = 'mision'
                                 st.rerun()
-                        else: st.warning("Conecta la API Key en la barra lateral primero.")
+                        else: 
+                            st.warning("⚠️ Primero ingresa tu API Key en la barra lateral.")
                 else:
-                    st.success("✅ Integridad Total.")
-
-                st.markdown("---")
-                st.subheader("🏆 Gesta del Clan")
-                st.write("**Meta Grupal:** Salida a Cine")
-                st.progress(65)
+                    st.success("✅ Integridad Total. ¡Eres un Titán!")

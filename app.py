@@ -6,7 +6,7 @@ import json
 import re
 
 # 1. --- CONFIGURACIÓN DE LA PÁGINA (ESTRUCTURA INTEGRAL) ---
-st.set_page_config(page_title="TITÁN ESTUDIANTE v116", layout="wide", page_icon="🛡️")
+st.set_page_config(page_title="TITÁN ESTUDIANTE v116.1", layout="wide", page_icon="🛡️")
 
 # Inicializar estados de persistencia para navegación y datos
 if 'view' not in st.session_state: st.session_state['view'] = 'dashboard'
@@ -50,11 +50,6 @@ st.markdown("""
         color: #334155; font-size: 1.1em;
     }
 
-    .evidencia-card {
-        background-color: #ffffff; border: 1px solid #e2e8f0;
-        padding: 15px; border-radius: 10px; margin-bottom: 10px;
-    }
-
     .diagnostico-full { font-size: 1em; line-height: 1.8; color: #334155; white-space: pre-wrap; }
 
     .alerta-daño { color: #ff4b4b; font-weight: bold; animation: pulse 1.5s infinite; }
@@ -64,7 +59,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. FUNCIONES DE IA (CEREBRO DINÁMICO) ---
+# --- 3. FUNCIONES DE IA (ADN Y SIMULADOR DE CRISIS) ---
 
 def procesar_adn_ia(file):
     if 'model' not in st.session_state: return None
@@ -110,11 +105,11 @@ def generar_mesa_crisis_ia(area):
     
     Devuelve un JSON puro:
     {{
-      "npc": "Cargo del personaje (ej: El Alcalde, El Científico Jefe)",
+      "npc": "Cargo del personaje",
       "escenario": "Contexto de la crisis...",
       "dialogo_npc": "Argumento que contiene el error...",
       "opciones": [
-        {{"fuente": "Nombre de la evidencia", "detalle": "Qué dice...", "es_correcta": true/false, "feedback": "Consecuencia..."}},
+        {{"fuente": "Nombre de la evidencia", "detalle": "Qué dice...", "es_correcta": true, "feedback": "Consecuencia..."}},
         ... (4 opciones)
       ]
     }}"""
@@ -124,7 +119,7 @@ def generar_mesa_crisis_ia(area):
         return json.loads(match.group())
     except: return None
 
-# --- 4. BARRA LATERAL (ENTRADA DE LLAVE INTACTA) ---
+# --- 4. BARRA LATERAL (CORREGIDO ERROR DE MODELS) ---
 with st.sidebar:
     st.title("🦅 TITÁN ESTUDIANTE")
     with st.expander("🔑 LLAVE MAESTRA", expanded=True):
@@ -133,6 +128,8 @@ with st.sidebar:
             try:
                 genai.configure(api_key=key)
                 model_list = genai.list_models()
+                # CORRECCIÓN: Creamos la lista 'models' antes de buscar
+                models = [m.name for m in model_list if 'generateContent' in m.supported_generation_methods]
                 target = next((m for m in models if '1.5-flash' in m), models[0])
                 st.session_state['model'] = genai.GenerativeModel(target)
                 st.success("Oráculo Conectado")
@@ -148,7 +145,7 @@ with st.sidebar:
 
 # --- 5. LÓGICA DE NAVEGACIÓN ---
 
-# A. MODO MESA DE CRISIS (Sustituye a las preguntas)
+# A. MODO MESA DE CRISIS
 if st.session_state['view'] == 'mision' and st.session_state['mision_data']:
     data = st.session_state['mision_data']
     st.title(f"💼 Mesa de Crisis: Forjando el {st.session_state.area_reparar}")
@@ -178,7 +175,7 @@ if st.session_state['view'] == 'mision' and st.session_state['mision_data']:
             st.session_state.view = 'dashboard'; st.session_state.mision_data = None
             st.session_state.simulacion_estado = "inicio"; st.rerun()
 
-# B. MODO DASHBOARD (TODO LO QUE TE GUSTA)
+# B. MODO DASHBOARD
 else:
     st.title("🛡️ TITÁN ESTUDIANTE: El Despertar")
     archivo = st.file_uploader("Cargue el ADN Académico (Excel)", type=["xlsx"])

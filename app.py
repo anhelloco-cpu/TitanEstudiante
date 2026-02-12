@@ -21,7 +21,7 @@ st.markdown("""
     
     /* Tarjetas de métricas: Bordes sutiles y fondo sólido */
     .stMetric { 
-        background-color: #262936; 
+        background-color: #d9d6c9; 
         border: 1px solid #3d4156; 
         padding: 10px; 
         border-radius: 12px; 

@@ -5,24 +5,55 @@ import plotly.express as px
 # 1. --- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Titán Estudiante - Dashboard", layout="wide", page_icon="🛡️")
 
-# Inicializar el estado de navegación (Para no borrar el Dashboard al entrar a la misión)
+# Inicializar el estado de navegación para el Simulador
 if 'view' not in st.session_state:
     st.session_state['view'] = 'dashboard'
 
-# --- 2. ESTILOS VISUALES MODERNOS (Gris Oxford) ---
+# --- 2. ESTILOS VISUALES (Fondo Blanco Moderno) ---
 st.markdown("""
     <style>
-    .stApp { background-color: #1a1c24; color: #e0e0e0; }
-    [data-testid="stSidebar"] { background-color: #111318; }
-    .stMetric { background-color: #262936; border: 1px solid #3d4156; padding: 10px; border-radius: 12px; }
-    .alerta-daño { color: #ff4b4b; font-weight: bold; animation: pulse 1.5s infinite; }
+    /* Fondo principal Blanco */
+    .stApp { 
+        background-color: #ffffff; 
+        color: #2b2d33; 
+    }
+    
+    /* Barra lateral Gris muy claro */
+    [data-testid="stSidebar"] { 
+        background-color: #f0f2f6; 
+    }
+    
+    /* Tarjetas de métricas blancas con borde gris */
+    .stMetric { 
+        background-color: #ffffff; 
+        border: 1px solid #d1d5db; 
+        padding: 10px; 
+        border-radius: 12px; 
+        color: #2b2d33;
+    }
+
+    /* Alerta de daño parpadeante en Rojo */
+    .alerta-daño { 
+        color: #ff4b4b; 
+        font-weight: bold; 
+        animation: pulse 1.5s infinite; 
+    }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+    
     /* Estilo Pergamino para la Misión */
-    .pergamino { background-color: #fdf5e6; color: #2b2d33; padding: 25px; border-radius: 10px; border-left: 8px solid #d4af37; margin-bottom: 20px; }
+    .pergamino { 
+        background-color: #fff9eb; 
+        color: #2b2d33; 
+        padding: 25px; 
+        border-radius: 10px; 
+        border: 1px solid #d4af37; 
+        border-left: 8px solid #d4af37;
+        margin-bottom: 20px; 
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. LÓGICA DE PROCESAMIENTO ---
+# --- 3. LÓGICA DE PROCESAMIENTO (ADN) ---
 def procesar_adn(file):
     try:
         df = pd.read_excel(file)
@@ -53,7 +84,7 @@ def procesar_adn(file):
         st.error(f"Error en el motor: {e}")
         return None
 
-# --- 4. FUNCIÓN DEL SIMULADOR DE EXAMEN (ICFES) ---
+# --- 4. FUNCIÓN DEL SIMULADOR DE EXAMEN ---
 def mostrar_simulador_mision():
     st.markdown("## ⚒️ Misión de Reparación: Lectura Crítica")
     st.write("Demuestra tu sabiduría para restaurar la integridad del Yelmo.")
@@ -88,7 +119,7 @@ def mostrar_simulador_mision():
 if st.session_state['view'] == 'mision':
     mostrar_simulador_mision()
 else:
-    # --- INTERFAZ DASHBOARD (Tu código original) ---
+    # --- INTERFAZ DASHBOARD ---
     st.title("🛡️ TITÁN ESTUDIANTE: El Despertar")
     st.markdown("---")
 
@@ -100,10 +131,10 @@ else:
             promedio_gral = df_adn['Puntaje'].mean()
             
             # --- LÓGICA DE AVATAR ---
-            if promedio_gral >= 4.5: rango, color_rango = "TITÁN LEGENDARIO", "#FFD700"
-            elif promedio_gral >= 3.8: rango, color_rango = "GUERRERO VETERANO", "#C0C0C0"
-            else: rango, color_rango = "RECLUTA EN FORJA", "#CD7F32"
-            
+            if promedio_gral >= 4.5: rango, color_rango = "TITÁN LEGENDARIO", "#d4af37" # Dorado Oscuro
+            elif promedio_gral >= 3.8: rango, color_rango = "GUERRERO VETERANO", "#7f8c8d" # Gris Plata
+            else: rango, color_rango = "RECLUTA EN FORJA", "#a0522d" # Bronce
+
             img_url = "https://www.freepik.com/premium-psd/ornate-medieval-armor-knights-cuirass_412654456.htm"
 
             with st.sidebar:
@@ -112,7 +143,6 @@ else:
                 st.metric("PODER TOTAL", round(promedio_gral, 2))
                 st.divider()
                 st.write("📍 **Clan:** Grado 10-A")
-                st.write("🏰 **Santuario:** Protegido")
 
             col1, col2 = st.columns([1, 1])
 
@@ -120,16 +150,18 @@ else:
                 st.subheader("⚔️ Inventario de Armadura")
                 for _, row in df_adn.iterrows():
                     if row['Estado'] == "Bronce":
-                        st.markdown(f"<span style='color: #ff4b4b;'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}**</span> | <span class='alerta-daño'>¡PIEZA DAÑADA!</span>", unsafe_allow_html=True)
+                        # Texto oscuro con alerta roja
+                        st.markdown(f"<span style='color: #2b2d33;'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}**</span> | <span class='alerta-daño'>¡PIEZA DAÑADA!</span>", unsafe_allow_html=True)
                     else:
-                        color_texto = "#FFD700" if row['Estado'] == "Oro" else "#00D4FF"
-                        st.markdown(f"<span style='color: {color_texto};'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | Nivel {row['Estado']}</span>", unsafe_allow_html=True)
+                        # Texto azul marino/oscuro para mayor legibilidad en blanco
+                        st.markdown(f"<span style='color: #00262e;'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | Nivel {row['Estado']}</span>", unsafe_allow_html=True)
                     st.progress(row['Salud'] / 100)
                 
                 st.divider()
+                # Gráfico Radar
                 fig = px.line_polar(df_adn, r='Puntaje', theta='Área', line_close=True, range_r=[0,5])
                 fig.update_traces(fill='toself', line_color=color_rango)
-                fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color="white", polar=dict(bgcolor="rgba(0,0,0,0)"))
+                fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color="#2b2d33", polar=dict(bgcolor="white"))
                 st.plotly_chart(fig, use_container_width=True)
 
             with col2:
@@ -142,8 +174,6 @@ else:
                     st.markdown("---")
                     st.subheader("⚒️ Taller de Mentores")
                     mas_critica = piezas_vulnerables.loc[piezas_vulnerables['Puntaje'].idxmin()]
-                    
-                    # AQUÍ ESTÁ EL CAMBIO: El botón ahora activa la Misión
                     if st.button(f"🔥 Forjar Reparación: {mas_critica['Área']}"):
                         st.session_state['view'] = 'mision'
                         st.rerun()

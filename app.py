@@ -4,15 +4,15 @@ import plotly.express as px
 import google.generativeai as genai
 import json
 
-# --- CONFIGURACIÓN DE PÁGINA ---
+# 1. --- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Titán Estudiante - Dashboard", layout="wide", page_icon="🛡️")
 
-# Memoria del Titán
+# Inicializar estados de la IA
 if 'view' not in st.session_state: st.session_state['view'] = 'dashboard'
-if 'mision_ia' not in st.session_state: st.session_state['mision_ia'] = ""
 if 'df_adn' not in st.session_state: st.session_state['df_adn'] = None
+if 'mision_ia' not in st.session_state: st.session_state['mision_ia'] = ""
 
-# --- ESTILOS (Blanco y Profesional) ---
+# --- 2. ESTILOS VISUALES (Fondo Blanco Moderno) ---
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; color: #2b2d33; }
@@ -20,55 +20,55 @@ st.markdown("""
     .stMetric { background-color: #ffffff; border: 1px solid #d1d5db; padding: 10px; border-radius: 12px; }
     .alerta-daño { color: #ff4b4b; font-weight: bold; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-    .pergamino { background-color: #fffcf5; color: #2b2d33; padding: 25px; border-radius: 10px; border: 1px solid #d4af37; border-left: 8px solid #d4af37; }
+    .pergamino { background-color: #fff9eb; color: #2b2d33; padding: 25px; border: 1px solid #d4af37; border-left: 8px solid #d4af37; border-radius: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- CONEXIÓN AL ORÁCULO ---
+# --- 3. CONEXIÓN: LLAVE MAESTRA ---
 with st.sidebar:
-    st.header("🔑 Conexión IA")
-    user_api_key = st.text_input("Pega tu API Key de Gemini:", type="password", key="key_input")
-    if user_api_key:
-        try:
-            genai.configure(api_key=user_api_key)
-            # Solución al 404: Intentar nombres alternativos del modelo
+    st.header("🛡️ ACCESO AL SANTUARIO")
+    with st.expander("🔑 LLAVE MAESTRA", expanded=True):
+        key = st.text_input("API Key (Cualquiera):", type="password")
+        if key:
             try:
+                genai.configure(api_key=key)
                 model = genai.GenerativeModel('gemini-1.5-flash')
-                model.generate_content("test") # Prueba de vida
-            except:
-                model = genai.GenerativeModel('models/gemini-1.5-flash')
-            st.success("Oráculo Conectado")
-        except Exception as e:
-            st.error(f"Error de conexión: {e}")
+                st.success("Oráculo Conectado")
+            except Exception as e:
+                st.error(f"Error de conexión: {e}")
 
-# --- MOTOR DE ADN INTELIGENTE (Descifrador de formatos) ---
+# --- 4. MOTOR DE ADN INTELIGENTE (IA Descifrando el Excel) ---
 def descifrar_adn_con_ia(file):
-    if not user_api_key: return None
+    if not key:
+        st.error("Introduce la Llave Maestra para despertar el motor.")
+        return None
+
     try:
+        # Leemos el archivo y mandamos una muestra a la IA
         df_raw = pd.read_excel(file)
-        # Enviamos una muestra real del Excel para que la IA entienda el formato
-        data_preview = df_raw.head(15).to_csv(index=False)
+        data_preview = df_raw.head(25).to_csv(index=False)
         
+        # El Prompt maestro que analiza el formato
         prompt = f"""
-        Eres el 'Decodificador de ADN Académico'. Analiza esta muestra de un archivo de notas:
+        Eres el 'Decodificador de ADN Académico'. Analiza estos datos:
         {data_preview}
 
         TAREA:
         1. Identifica las notas de: Matemáticas, Lectura Crítica, Ciencias Naturales, Sociales y Ciudadanas, Inglés.
-        2. Detecta la escala: Si es 0-500 (ICFES), 0-100 o 0-5.
-        3. Normaliza todo a una escala de 0.0 a 5.0 (Donde 5.0 es perfecto).
-        4. Devuelve un JSON puro (sin texto extra) así:
+        2. Si el archivo es del ICFES (puntajes 0-100 o 0-500), normaliza a escala 0.0-5.0.
+        3. Si el archivo es de Colegio (puntajes 0-5), mantenlo así.
+        4. Si una materia tiene varios componentes (ej. Química, Física), saca el promedio.
+        5. Devuelve EXCLUSIVAMENTE un JSON puro (sin texto extra):
         [
           {{"Área": "Matemáticas", "Puntaje": 4.2}},
-          ... (las 5 áreas)
+          ...
         ]
         """
         response = model.generate_content(prompt)
-        # Limpieza de formato JSON
         clean_json = response.text.replace('```json', '').replace('```', '').strip()
         adn_data = json.loads(clean_json)
         
-        # Mapeo de piezas medievales
+        # Mapeo de piezas de armadura
         mapeo = {"Matemáticas": "Peto", "Lectura Crítica": "Yelmo", "Ciencias Naturales": "Grebas", "Sociales y Ciudadanas": "Escudo", "Inglés": "Guantelete"}
         for i in adn_data:
             i["Pieza"] = mapeo.get(i["Área"], "Accesorio")
@@ -76,10 +76,10 @@ def descifrar_adn_con_ia(file):
             i["Salud"] = int((i["Puntaje"] / 5) * 100)
         return pd.DataFrame(adn_data)
     except Exception as e:
-        st.error(f"El Titán no pudo leer este pergamino: {e}")
+        st.error(f"El Titán no pudo leer el pergamino: {e}")
         return None
 
-# --- NAVEGACIÓN ---
+# --- 5. NAVEGACIÓN ---
 if st.session_state['view'] == 'mision':
     st.markdown("## ⚒️ FORJA DE REPARACIÓN")
     st.markdown(f'<div class="pergamino">{st.session_state["mision_ia"]}</div>', unsafe_allow_html=True)
@@ -89,9 +89,10 @@ if st.session_state['view'] == 'mision':
 
 else:
     st.title("🛡️ TITÁN ESTUDIANTE: El Despertar")
-    archivo = st.file_uploader("Cargue el archivo de Notas (ICFES o Colegio)", type=["xlsx"])
+    archivo = st.file_uploader("Cargue el ADN Académico (Miguel o Salvador)", type=["xlsx"])
 
     if archivo:
+        # Solo procesamos si hay cambio de archivo o primera carga
         if st.session_state['df_adn'] is None:
             with st.spinner("La IA está descifrando el ADN..."):
                 st.session_state['df_adn'] = descifrar_adn_con_ia(archivo)
@@ -104,14 +105,16 @@ else:
             with st.sidebar:
                 st.image("https://www.freepik.com/premium-psd/ornate-medieval-armor-knights-cuirass_412654456.htm", use_column_width=True)
                 st.metric("PODER TOTAL", round(promedio_gral, 2))
+                st.divider()
+                st.write("📍 **Clan:** Grado 11-A")
 
             col1, col2 = st.columns([1, 1])
             with col1:
                 st.subheader("⚔️ Inventario de Armadura")
                 for _, row in df_adn.iterrows():
                     c_txt = "#ff4b4b" if row['Estado'] == "Bronce" else "#00262e"
-                    status = "¡DAÑADA!" if row['Estado'] == "Bronce" else row['Estado']
-                    st.markdown(f"<span style='color: {c_txt};'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}**</span> | {status}", unsafe_allow_html=True)
+                    alerta = " | <span class='alerta-daño'>¡PIEZA DAÑADA!</span>" if row['Estado'] == "Bronce" else f" | Nivel {row['Estado']}"
+                    st.markdown(f"<span style='color: {c_txt};'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}**</span>{alerta}", unsafe_allow_html=True)
                     st.progress(row['Salud'] / 100)
 
                 fig = px.line_polar(df_adn, r='Puntaje', theta='Área', line_close=True, range_r=[0,5])
@@ -124,14 +127,14 @@ else:
                 vulnerables = df_adn[df_adn['Puntaje'] < 3.8]
                 if not vulnerables.empty:
                     for _, row in vulnerables.iterrows():
-                        st.error(f"⚠️ Punto de Quiebre: {row['Pieza']} ({row['Área']})")
+                        st.error(f"⚠️ **Debilidad:** {row['Pieza']} ({row['Área']})")
                     
                     if st.button("🔥 Forjar Reparación"):
                         with st.spinner("Creando misión personalizada..."):
-                            area = vulnerables.loc[vulnerables['Puntaje'].idxmin()]['Área']
-                            res = model.generate_content(f"Crea un reto ICFES de {area} con texto y pregunta A,B,C,D.")
+                            area_debil = vulnerables.loc[vulnerables['Puntaje'].idxmin()]['Área']
+                            res = model.generate_content(f"Crea un reto tipo ICFES de {area_debil} con un texto de análisis y pregunta A,B,C,D.")
                             st.session_state['mision_ia'] = res.text
                             st.session_state['view'] = 'mision'
                             st.rerun()
                 else:
-                    st.success("✅ Armadura Integra. ¡Eres un Titán!")
+                    st.success("✅ Integridad Total. Armadura de Leyenda.")

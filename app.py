@@ -126,7 +126,8 @@ if archivo:
             st.plotly_chart(fig, use_container_width=True)
 
 
-with col2:
+
+        with col2:
             st.subheader("🧠 Diagnóstico de la IA")
             
             # Filtramos todas las piezas que están en nivel Bronce (menor a 3.8)

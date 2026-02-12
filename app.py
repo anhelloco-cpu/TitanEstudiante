@@ -6,13 +6,13 @@ import google.generativeai as genai
 # 1. --- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Titán Estudiante - Dashboard", layout="wide", page_icon="🛡️")
 
-# Inicializar estados de la IA
+# Inicializar estados de la IA (Para no perder la navegación)
 if 'view' not in st.session_state:
     st.session_state['view'] = 'dashboard'
 if 'mision_ia' not in st.session_state:
     st.session_state['mision_ia'] = ""
 
-# --- 2. ESTILOS VISUALES (Tu fondo Blanco y Colores) ---
+# --- 2. ESTILOS VISUALES (Fondo Blanco y Colores Solicitados) ---
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; color: #2b2d33; }
@@ -24,27 +24,30 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. LÓGICA DE LA IA TITÁN ---
+# --- 3. LÓGICA DE LA IA TITÁN (Conexión Corregida) ---
 with st.sidebar:
     st.header("🔑 Conexión IA")
     user_api_key = st.text_input("Pega tu API Key de Gemini:", type="password")
     if user_api_key:
-        genai.configure(api_key=user_api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        st.success("IA Conectada")
+        try:
+            genai.configure(api_key=user_api_key)
+            # Usamos el modelo con el nombre técnico correcto
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            st.success("IA Conectada")
+        except Exception as e:
+            st.error(f"Error de configuración: {e}")
 
 def generar_mision_con_ia(area):
     if not user_api_key: 
         return "❌ Error: No has ingresado la API Key en la barra lateral."
     
-    # Instrucciones maestras basadas en tus PDFs
     prompt = f"""
     Eres el Titán Protector, experto en el examen ICFES Saber 11 de Colombia.
     Analiza la debilidad en {area}. 
-    Genera una misión de entrenamiento real:
-    1. Un texto de análisis (basado en la complejidad de los cuadernillos 2024/2025).
+    Genera una misión de entrenamiento real basada en la complejidad de los cuadernillos 2024/2025:
+    1. Un texto de análisis técnico o literario.
     2. Una pregunta de selección múltiple (A, B, C, D).
-    3. Indica la respuesta correcta y una breve explicación técnica.
+    3. Respuesta correcta y una breve explicación técnica.
     Usa un lenguaje motivador de guerrero.
     """
     
@@ -52,10 +55,9 @@ def generar_mision_con_ia(area):
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        # Esto nos dirá el error real (si es la llave, el modelo o el internet)
         return f"⚠️ El Oráculo dice: {str(e)}"
 
-# --- 4. LÓGICA DE PROCESAMIENTO ADN (Tu código original) ---
+# --- 4. LÓGICA DE PROCESAMIENTO ADN ---
 def procesar_adn(file):
     try:
         df = pd.read_excel(file)
@@ -92,7 +94,7 @@ if st.session_state['view'] == 'mision':
         st.rerun()
 
 else:
-    # --- INTERFAZ (Tu código original intacto) ---
+    # --- INTERFAZ DASHBOARD ---
     st.title("🛡️ TITÁN ESTUDIANTE: El Despertar")
     st.markdown("---")
     archivo = st.file_uploader("Cargue el Excel de Notas para despertar al Titán", type=["xlsx"])
@@ -107,6 +109,7 @@ else:
             elif promedio_gral >= 3.8: rango, color_r = "GUERRERO VETERANO", "#C0C0C0"
             else: rango, color_r = "RECLUTA EN FORJA", "#CD7F32"
             
+            # Nota: Usa el link directo a la imagen si este no carga
             img_url = "https://www.freepik.com/premium-psd/ornate-medieval-armor-knights-cuirass_412654456.htm"
 
             with st.sidebar:

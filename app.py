@@ -5,13 +5,20 @@ import google.generativeai as genai
 
 # --- 1. CONFIGURACIÓN DE LA IA TITÁN (API KEY) ---
 # Pega tu clave aquí o ponla en el buscador de la App para que sea secreta
-API_KEY = st.secrets["GEMINI_API_KEY"]
+# Busca esta parte al inicio de tu app.py
+try:
+    # Intenta leer la llave de los secretos de Streamlit
+    API_KEY = st.secrets["GEMINI_API_KEY"]
+except:
+    # Si no hay secretos, intenta leerla de una variable local (opcional)
+    API_KEY = "TU_API_KEY_AQUÍ" # <--- PEGA TU LLAVE AQUÍ SI NO USAS SECRETS
 
-if API_KEY != "TU_API_KEY_AQUÍ":
+if API_KEY and API_KEY != "TU_API_KEY_AQUÍ":
     genai.configure(api_key=API_KEY)
     model = genai.GenerativeModel('gemini-1.5-flash')
 else:
-    st.warning("⚠️ Titán en modo espera: Por favor ingresa tu API Key en el código.")
+    st.error("🚨 **SISTEMA DESACTIVADO:** Falta la API Key del Titán para el diagnóstico live.")
+    st.info("Obtén tu llave en Google AI Studio y agrégala a los Secrets de la App.")
 
 # --- 2. CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Titán Estudiante - Live AI", layout="wide", page_icon="🛡️")

@@ -5,13 +5,27 @@ import plotly.express as px
 # Configuración de la página
 st.set_page_config(page_title="Titán Estudiante - Dashboard", layout="wide", page_icon="🛡️")
 
-# --- ESTILOS VISUALES (LOOK & FEEL GAMING) ---
+# --- ESTILOS VISUALES MODERNOS (Gris Oxford) ---
 st.markdown("""
     <style>
-    .stApp { background-color: #0e1117; color: white; }
-    .stMetric { background-color: #1c2030; border: 1px solid #3d4156; padding: 10px; border-radius: 10px; }
-    .alerta-daño { color: #ff4b4b; font-weight: bold; animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+    /* Fondo principal: Gris oscuro suave (no negro) */
+    .stApp { 
+        background-color: #1a1c24; 
+        color: #e0e0e0; 
+    }
+    
+    /* Barra lateral: Un tono un poco más oscuro para dar contraste */
+    [data-testid="stSidebar"] { 
+        background-color: #111318; 
+    }
+    
+    /* Tarjetas de métricas: Bordes sutiles y fondo sólido */
+    .stMetric { 
+        background-color: #262936; 
+        border: 1px solid #3d4156; 
+        padding: 10px; 
+        border-radius: 12px; 
+    }
     </style>
     """, unsafe_allow_html=True)
 

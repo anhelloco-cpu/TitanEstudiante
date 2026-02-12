@@ -6,18 +6,18 @@ import json
 import re
 
 # 1. --- CONFIGURACIÓN DE LA PÁGINA ---
-st.set_page_config(page_title="TITÁN ESTUDIANTE v113", layout="wide", page_icon="🛡️")
+st.set_page_config(page_title="TITÁN ESTUDIANTE v111", layout="wide", page_icon="🛡️")
 
-# Inicializar estados de persistencia para que no se borren al recargar
+# Inicializar estados de persistencia
 if 'view' not in st.session_state: st.session_state['view'] = 'dashboard'
 if 'df_adn' not in st.session_state: st.session_state['df_adn'] = None
-if 'diagnostico_ia' not in st.session_state: st.session_state['diagnostico_ia'] = ""
+if 'diagnostico_detallado' not in st.session_state: st.session_state['diagnostico_detallado'] = ""
 if 'mision_data' not in st.session_state: st.session_state['mision_data'] = None
 if 'progreso_mision' not in st.session_state:
     st.session_state.progreso_mision = {'idx': 0, 'correctas': 0, 'terminada': False}
 if 'area_reparar' not in st.session_state: st.session_state.area_reparar = ""
 
-# --- 2. ESTILOS VISUALES (Blanco y Profesional - Titán Style) ---
+# --- 2. ESTILOS VISUALES (Fondo Blanco y Estética Profesional) ---
 st.markdown("""
 <style>
     .stApp { background-color: #ffffff; color: #2b2d33; }
@@ -35,114 +35,99 @@ st.markdown("""
         font-size: 1.1em; line-height: 1.6;
     }
 
-    /* Caja del Diagnóstico Maestro */
-    .diagnostico-pro {
-        background-color: #f1f5f9; border-radius: 12px; padding: 25px;
-        border-left: 6px solid #0f172a; margin-bottom: 20px;
-        color: #1e293b; font-size: 1.05em; line-height: 1.6;
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    .diagnostico-caja {
+        background-color: #f0f2f6; border-radius: 10px; padding: 20px;
+        border-left: 5px solid #2b2d33; margin-bottom: 20px; font-size: 0.95em;
     }
 
     .alerta-daño { color: #ff4b4b; font-weight: bold; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+    
+    .stButton>button { border-radius: 8px; font-weight: bold; transition: all 0.3s; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. FUNCIONES DE IA (Motor de Análisis y Misión) ---
-
-def procesar_adn_ia_maestro(file):
-    if 'model' not in st.session_state:
-        st.error("❌ El Oráculo está dormido. Conecta la LLAVE MAESTRA en la barra lateral.")
-        return None
-    
+# --- 3. FUNCIONES DE IA (Cerebro del Titán con Análisis de Periodos) ---
+def procesar_adn_ia(file):
+    if 'model' not in st.session_state: return None
     try:
-        # Cargar el archivo
         df_raw = pd.read_excel(file)
-        # Tomar una muestra representativa (primeras 50 filas) para no saturar
-        csv_sample = df_raw.head(50).to_csv(index=False)
+        # Enviamos una muestra más amplia para que la IA vea las columnas AP1, AP2, etc.
+        csv_full_sample = df_raw.head(40).to_csv(index=False)
         
-        prompt = f"""
-        Actúa como el Analista Jefe de Titán Estudiante. Analiza estos registros de Miguel (notas por periodo y materias):
-        {csv_sample}
+        prompt = f"""Analiza estos registros académicos que contienen múltiples periodos (AP1, AP2, AP3, etc.):
+        {csv_full_sample}
         
         TAREA:
         1. Identifica las 5 áreas ICFES (Matemáticas, Lectura Crítica, Ciencias Naturales, Sociales, Inglés).
-        2. Calcula el puntaje promedio normalizado a escala 0.0-5.0.
-        3. Analiza la TENDENCIA entre los periodos AP1, AP2, AP3, etc. 
-        4. Genera un DIAGNÓSTICO MAESTRO de 2 párrafos: Explica si hay progreso o retroceso y advierte sobre bajones en el último periodo.
+        2. Calcula el puntaje promedio actual (normalizado a 0.0-5.0).
+        3. Realiza un DIAGNÓSTICO DE TENDENCIA: Compara los periodos (AP1, AP2...) y determina si el estudiante está mejorando, decayendo o si hay un bajón crítico en alguna materia específica en el último periodo reportado.
         
-        IMPORTANTE: Devuelve EXCLUSIVAMENTE un JSON con este formato:
+        Devuelve UNICAMENTE un JSON con esta estructura:
         {{
-            "tabla": [ {{"Área": "Nombre", "Puntaje": 4.2}}, ... ],
-            "diagnostico": "Texto del diagnóstico de tendencias..."
+            "tabla": [ 
+                {{"Área": "Matemáticas", "Puntaje": 4.2}},
+                ... (las 5 áreas)
+            ],
+            "diagnostico_master": "Un párrafo épico y técnico analizando las tendencias de los periodos y alertando sobre caídas de rendimiento."
         }}
         """
-        
         response = st.session_state['model'].generate_content(prompt)
+        json_clean = re.sub(r'```json\s*|\s*```', '', response.text).strip()
+        data_packet = json.loads(json_clean)
         
-        # Limpiar y extraer el JSON de la respuesta
-        text_response = response.text
-        json_match = re.search(r'\{.*\}', text_response, re.DOTALL)
-        if json_match:
-            data = json.loads(json_match.group())
-            st.session_state['diagnostico_ia'] = data['diagnostico']
-            
-            # Formatear el DataFrame final
-            adn_list = data['tabla']
-            mapeo = {"Matemáticas": "Peto", "Lectura Crítica": "Yelmo", "Ciencias Naturales": "Grebas", "Sociales y Ciudadanas": "Escudo", "Inglés": "Guantelete"}
-            for i in adn_list:
-                i["Pieza"] = mapeo.get(i["Área"], "Accesorio")
-                i["Estado"] = "Oro" if i["Puntaje"] >= 4.5 else "Plata" if i["Puntaje"] >= 3.8 else "Bronce"
-                i["Salud"] = int((i["Puntaje"] / 5) * 100)
-            return pd.DataFrame(adn_list)
-        else:
-            st.error("La IA no devolvió un formato válido. Reintenta cargar el archivo.")
-            return None
-            
-    except Exception as e:
-        st.error(f"Error en el descifrado: {str(e)}")
-        return None
-
-def generar_mision_ia(area):
-    prompt = f"""Genera un caso de estudio tipo ICFES para {area} y 3 preguntas interactivas.
-    Devuelve un JSON puro: {{ "caso": "...", "preguntas": [ {{"enunciado": "...", "opciones": {{"A":"...", "B":"...", "C":"...", "D":"..."}}, "correcta": "letra"}}, ... ] }}"""
-    try:
-        res = st.session_state['model'].generate_content(prompt)
-        json_match = re.search(r'\{.*\}', res.text, re.DOTALL)
-        return json.loads(json_match.group())
+        st.session_state['diagnostico_detallado'] = data_packet['diagnostico_master']
+        
+        adn_list = data_packet['tabla']
+        mapeo = {"Matemáticas": "Peto", "Lectura Crítica": "Yelmo", "Ciencias Naturales": "Grebas", "Sociales y Ciudadanas": "Escudo", "Inglés": "Guantelete"}
+        for i in adn_list:
+            i["Pieza"] = mapeo.get(i["Área"], "Accesorio")
+            i["Estado"] = "Oro" if i["Puntaje"] >= 4.5 else "Plata" if i["Puntaje"] >= 3.8 else "Bronce"
+            i["Salud"] = int((i["Puntaje"] / 5) * 100)
+        return pd.DataFrame(adn_list)
     except: return None
 
-# --- 4. BARRA LATERAL (LLAVE MAESTRA Y CLAN) ---
+def generar_mision_ia(area):
+    prompt = f"""Genera un caso de análisis tipo ICFES Saber 11 para {area}.
+    Luego genera 3 preguntas de selección múltiple basadas en ese caso.
+    Devuelve un JSON puro: {{ "caso": "texto...", "preguntas": [ {{"enunciado": "...", "opciones": {{"A":"...", "B":"...", "C":"...", "D":"..."}}, "correcta": "letra"}}, ... ] }}"""
+    try:
+        res = st.session_state['model'].generate_content(prompt)
+        return json.loads(re.sub(r'```json\s*|\s*```', '', res.text).strip())
+    except: return None
+
+# --- 4. BARRA LATERAL (Conexión y Estadísticas del Clan) ---
 with st.sidebar:
     st.title("🦅 TITÁN ESTUDIANTE")
     with st.expander("🔑 LLAVE MAESTRA", expanded=True):
-        key = st.text_input("API Key de Gemini:", type="password", key="key_input")
+        key = st.text_input("API Key de Gemini:", type="password", key="api_key_sidebar")
         if key:
             try:
                 genai.configure(api_key=key)
                 model_list = genai.list_models()
-                target = next((m.name for m in model_list if '1.5-flash' in m.name), "models/gemini-pro")
+                models = [m.name for m in model_list if 'generateContent' in m.supported_generation_methods]
+                target = next((m for m in models if '1.5-flash' in m), models[0])
                 st.session_state['model'] = genai.GenerativeModel(target)
                 st.success("Oráculo Conectado")
-            except: st.error("Llave inválida.")
+            except Exception as e: st.error(f"Error: {e}")
 
     if st.session_state['df_adn'] is not None:
         st.divider()
-        poder_total = st.session_state['df_adn']['Puntaje'].mean()
-        st.metric("PODER TOTAL", round(poder_total, 2))
+        promedio_gral = st.session_state['df_adn']['Puntaje'].mean()
+        st.metric("PODER TOTAL", round(promedio_gral, 2))
         st.write("📍 **Clan:** Miguel - Grado 11-A")
-        st.subheader("🏆 Gesta del Clan")
+        st.markdown("### 🏆 Gesta del Clan")
+        st.write("Meta: Salida a Cine")
         st.progress(65)
-        st.caption("Meta: Salida a Cine (65%)")
+        st.caption("Fuerza colectiva: 65%")
 
-# --- 5. NAVEGACIÓN ---
+# --- 5. LÓGICA DE NAVEGACIÓN ---
 
-# A. MODO MISIÓN (Examen interactivo)
 if st.session_state['view'] == 'mision' and st.session_state['mision_data']:
     data = st.session_state['mision_data']
     prog = st.session_state.progreso_mision
     
-    st.title(f"⚒️ Taller de Forja: Reparando {st.session_state.area_reparar}")
+    st.title(f"⚒️ Forja de Reparación: {st.session_state.area_reparar}")
     st.markdown(f'<div class="pergamino"><b>CONTEXTO DEL CASO:</b><br>{data["caso"]}</div>', unsafe_allow_html=True)
     
     if not prog['terminada']:
@@ -150,15 +135,15 @@ if st.session_state['view'] == 'mision' and st.session_state['mision_data']:
         st.subheader(f"Desafío {prog['idx'] + 1} de 3")
         st.write(f"**{q['enunciado']}**")
         
-        ans = st.radio("Selecciona tu respuesta:", list(q["opciones"].values()), key=f"q_radio_{prog['idx']}")
+        opcion_elegida = st.radio("Selecciona tu respuesta:", list(q["opciones"].values()), key=f"radio_q_{prog['idx']}")
         
-        if st.button("ENTREGAR"):
-            letra = [k for k, v in q["opciones"].items() if v == ans][0]
-            if letra == q["correcta"]:
-                st.success("✨ ¡Acierto!")
+        if st.button("ENTREGAR RESPUESTA"):
+            letra_sel = [k for k, v in q["opciones"].items() if v == opcion_elegida][0]
+            if letra_sel == q["correcta"]:
+                st.success("✨ ¡ACIERTO!")
                 st.session_state.progreso_mision['correctas'] += 1
             else:
-                st.error(f"❌ Fallo. La correcta era la {q['correcta']}.")
+                st.error(f"❌ FALLO. Era la {q['correcta']}.")
             
             if prog['idx'] < 2:
                 st.session_state.progreso_mision['idx'] += 1
@@ -166,15 +151,15 @@ if st.session_state['view'] == 'mision' and st.session_state['mision_data']:
                 st.session_state.progreso_mision['terminada'] = True
             st.rerun()
     else:
+        st.divider()
         if prog['correctas'] >= 2:
             st.balloons()
-            st.success(f"🛡️ **PIEZA REPARADA:** Acertaste {prog['correctas']}/3. Tu armadura ha sido reforzada.")
-            # Actualizar ADN
+            st.success(f"🛡️ **PIEZA REPARADA:** {prog['correctas']}/3 aciertos.")
             df = st.session_state.df_adn
             idx = df[df['Área'] == st.session_state.area_reparar].index
             df.loc[idx, ['Puntaje', 'Estado', 'Salud']] = [4.7, "Oro", 94]
         else:
-            st.error(f"🏚️ **FORJA FALLIDA:** Solo lograste {prog['correctas']}/3. Sigue entrenando.")
+            st.error("🏚️ **FORJA FALLIDA.**")
         
         if st.button("VOLVER AL DASHBOARD"):
             st.session_state.view = 'dashboard'
@@ -182,25 +167,25 @@ if st.session_state['view'] == 'mision' and st.session_state['mision_data']:
             st.session_state.progreso_mision = {'idx': 0, 'correctas': 0, 'terminada': False}
             st.rerun()
 
-# B. MODO DASHBOARD (Análisis completo)
 else:
     st.title("🛡️ TITÁN ESTUDIANTE: El Despertar")
     archivo = st.file_uploader("Cargue el ADN Académico (Excel)", type=["xlsx"])
 
     if archivo:
         if st.session_state['df_adn'] is None:
-            with st.spinner("IA descifrando periodos y analizando tendencias..."):
-                st.session_state['df_adn'] = procesar_adn_ia_maestro(archivo)
+            with st.spinner("Analizando ADN y Tendencias históricas..."):
+                st.session_state['df_adn'] = procesar_adn_ia(archivo)
         
         df = st.session_state['df_adn']
         if df is not None:
-            col1, col2 = st.columns([1, 1.2])
+            col1, col2 = st.columns([1, 1.2]) # Col 2 un poco más ancha para el diagnóstico
             
             with col1:
                 st.subheader("⚔️ Inventario de Armadura")
                 for _, row in df.iterrows():
-                    c_txt = "#ff4b4b" if row['Estado'] == "Bronce" else "#2b2d33"
-                    label = "¡DAÑADA!" if row['Estado'] == "Bronce" else row['Estado']
+                    es_bronce = row['Estado'] == "Bronce"
+                    c_txt = "#ff4b4b" if es_bronce else "#2b2d33"
+                    label = "¡DAÑADA!" if es_bronce else row['Estado']
                     st.markdown(f"<span style='color:{c_txt}; font-weight:bold;'>{row['Pieza']}</span> ({row['Área']}): {row['Puntaje']} | {label}", unsafe_allow_html=True)
                     st.progress(row['Salud'] / 100)
                 
@@ -212,28 +197,28 @@ else:
 
             with col2:
                 st.subheader("🧠 Diagnóstico del Oráculo")
-                # Mostrar el análisis de periodos
-                if st.session_state['diagnostico_ia']:
-                    st.markdown(f'<div class="diagnostico-pro">{st.session_state["diagnostico_ia"]}</div>', unsafe_allow_html=True)
-                
+                # NUEVO: MOSTRAR DIAGNÓSTICO DE TENDENCIAS
+                if st.session_state['diagnostico_detallado']:
+                    st.markdown(f"<div class='diagnostico-caja'>{st.session_state['diagnostico_detallado']}</div>", unsafe_allow_html=True)
+
                 vulnerables = df[df['Puntaje'] < 3.8]
                 if not vulnerables.empty:
                     mas_debil = vulnerables.loc[vulnerables['Puntaje'].idxmin()]
                     for _, row in vulnerables.iterrows():
                         if row['Área'] == mas_debil['Área']:
-                            st.error(f"🚨 **CRÍTICO:** Tu {row['Pieza']} ({row['Área']}) requiere forja inmediata.")
+                            st.error(f"🚨 **PRIORIDAD:** Tu {row['Pieza']} ({row['Área']}) requiere forja urgente.")
                         else:
-                            st.warning(f"⚠️ **DEBILIDAD:** {row['Pieza']} ({row['Área']}) con fisuras.")
+                            st.warning(f"⚠️ **VULNERABLE:** Tu {row['Pieza']} ({row['Área']}) tiene fisuras.")
                     
                     st.divider()
                     st.subheader("⚒️ Taller de Mentores")
                     if st.button(f"🔥 Forjar Reparación: {mas_debil['Pieza'].upper()}"):
                         if 'model' in st.session_state:
-                            with st.spinner("Generando 3 retos..."):
+                            with st.spinner("Generando 3 desafíos..."):
                                 st.session_state.mision_data = generar_mision_ia(mas_debil['Área'])
                                 st.session_state.area_reparar = mas_debil['Área']
                                 st.session_state.view = 'mision'
                                 st.rerun()
-                        else: st.warning("Conecte la Llave Maestra primero.")
+                        else: st.warning("Conecte la Llave Maestra.")
                 else:
-                    st.success("✨ **INTEGRIDAD TOTAL:** Armadura legendaria.")
+                    st.success("✨ **INTEGRIDAD TOTAL:** Tu armadura es impenetrable.")

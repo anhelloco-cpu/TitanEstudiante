@@ -2,19 +2,17 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import google.generativeai as genai
+import json
 
 # 1. --- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Titán Estudiante - Dashboard", layout="wide", page_icon="🛡️")
 
-# --- PERSISTENCIA DE DATOS (El corazón de la App) ---
-if 'view' not in st.session_state:
-    st.session_state['view'] = 'dashboard'
-if 'mision_ia' not in st.session_state:
-    st.session_state['mision_ia'] = ""
-if 'api_key_configurada' not in st.session_state:
-    st.session_state['api_key_configurada'] = False
+# Inicializar estados
+if 'view' not in st.session_state: st.session_state['view'] = 'dashboard'
+if 'mision_ia' not in st.session_state: st.session_state['mision_ia'] = ""
+if 'df_adn' not in st.session_state: st.session_state['df_adn'] = None
 
-# --- 2. ESTILOS VISUALES (Tu fondo Blanco) ---
+# --- 2. ESTILOS VISUALES (Fondo Blanco) ---
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; color: #2b2d33; }
@@ -26,91 +24,98 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. CONEXIÓN AL ORÁCULO (Se ejecuta en cada recarga) ---
+# --- 3. CONEXIÓN AL ORÁCULO (IA) ---
 with st.sidebar:
     st.header("🔑 Conexión IA")
-    # Usamos la 'key' para que Streamlit guarde el valor automáticamente
     user_api_key = st.text_input("Pega tu API Key de Gemini:", type="password", key="key_input")
-    
-    if st.session_state.key_input:
+    if user_api_key:
         try:
-            genai.configure(api_key=st.session_state.key_input)
-            # Intentamos con el modelo más estable
+            genai.configure(api_key=user_api_key)
             model = genai.GenerativeModel('gemini-1.5-flash')
-            st.session_state['api_key_configurada'] = True
             st.success("Oráculo Conectado")
         except Exception as e:
-            st.error(f"Error de conexión: {e}")
+            st.error(f"Error: {e}")
 
-# --- 4. FUNCIÓN GENERADORA (Con indentación perfecta) ---
-def generar_mision_con_ia(area):
-    if not st.session_state['api_key_configurada']:
-        return "❌ Error: El Oráculo no tiene energía (Falta API Key)."
-    
-    prompt = f"""
-    Eres el Titán Académico, experto en ICFES Saber 11 de Colombia.
-    Genera un desafío de {area} con:
-    1. Un texto basado en los documentos ICFES 2025.
-    2. Una pregunta de selección múltiple (A,B,C,D).
-    3. La respuesta correcta explicada de forma épica.
-    """
-    
+# --- 4. MOTOR DE ADN INTELIGENTE (IA DESCIFRANDO EL EXCEL) ---
+def procesar_adn_con_ia(file):
+    if not user_api_key:
+        st.error("Debes conectar la API Key para que la IA descifre este archivo.")
+        return None
+
     try:
-        # Llamamos al modelo global
+        # Leemos las primeras filas para que la IA entienda el formato
+        df_raw = pd.read_excel(file)
+        # Convertimos una muestra de los datos a texto para la IA
+        data_sample = df_raw.head(20).to_csv(index=False)
+        column_names = list(df_raw.columns)
+
+        prompt = f"""
+        Actúa como un experto en analítica educativa. Te voy a pasar una muestra de datos de un estudiante:
+        COLUMNAS: {column_names}
+        DATOS: {data_sample}
+
+        TAREA:
+        1. Identifica qué columnas o filas corresponden a estas 5 áreas del ICFES: 
+           Matemáticas, Lectura Crítica, Ciencias Naturales, Sociales y Ciudadanas, Inglés.
+        2. Calcula el puntaje promedio para cada área.
+        3. IMPORTANTE: Si el archivo usa escala 0-100 o 0-500, normalízalo a escala de 0.0 a 5.0.
+        4. Devuelve ÚNICAMENTE un JSON con este formato:
+        [
+          {{"Área": "Matemáticas", "Puntaje": 4.2}},
+          ...
+        ]
+        """
+        
+        response = model.generate_content(prompt)
+        # Limpiar la respuesta de la IA (quitar bloques de código si los hay)
+        clean_json = response.text.replace('```json', '').replace('```', '').strip()
+        adn_list = json.loads(clean_json)
+        
+        # Enriquecer los datos para el resto de la app
+        mapeo_p = {"Matemáticas": "Peto", "Lectura Crítica": "Yelmo", "Ciencias Naturales": "Grebas", "Sociales y Ciudadanas": "Escudo", "Inglés": "Guantelete"}
+        for item in adn_list:
+            item["Pieza"] = mapeo_p.get(item["Área"], "Accesorio")
+            item["Estado"] = "Oro" if item["Puntaje"] >= 4.5 else "Plata" if item["Puntaje"] >= 3.8 else "Bronce"
+            item["Salud"] = int((item["Puntaje"] / 5) * 100)
+
+        return pd.DataFrame(adn_list)
+    except Exception as e:
+        st.error(f"El Titán no pudo descifrar el ADN: {e}")
+        return None
+
+def generar_mision_con_ia(area):
+    prompt = f"Genera un reto ICFES de {area} con texto, pregunta A,B,C,D y explicación técnica."
+    try:
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        return f"⚠️ Fallo en la forja: {str(e)}"
+        return f"Fallo en la forja: {e}"
 
-# --- 5. MOTOR DE ADN (Tu código original) ---
-def procesar_adn(file):
-    try:
-        df = pd.read_excel(file)
-        df = df.dropna(subset=['COMPONENTE'])
-        exclude = ['INGLES', 'BAJO', 'BÁSICO', 'BASICO', 'ALTO', 'SUPERIOR', 'TOTAL']
-        df = df[~df['COMPONENTE'].str.upper().isin(exclude)]
-        df['PROMEDIO'] = pd.to_numeric(df['PROMEDIO'], errors='coerce')
-        df = df.dropna(subset=['PROMEDIO'])
-        mapping = {
-            'Matemáticas': ['Numérico', 'Métrico', 'Aleatorio'],
-            'Lectura Crítica': ['Pragmático Lector', 'Pragmático Escritor'],
-            'Ciencias Naturales': ['Naturales', 'Fisica', 'Quimica', 'Biologia'],
-            'Sociales y Ciudadanas': ['Sociales'],
-            'Inglés': ['Grammar', 'Communication', 'Reading Plan']
-        }
-        adn_calculado = []
-        for area, lista_comp in mapping.items():
-            sub_df = df[df['COMPONENTE'].isin(lista_comp)]
-            promedio = round(sub_df['PROMEDIO'].mean(), 2) if not sub_df.empty else 0.0
-            mapeo_p = {"Matemáticas": "Peto", "Lectura Crítica": "Yelmo", "Ciencias Naturales": "Grebas", "Sociales y Ciudadanas": "Escudo", "Inglés": "Guantelete"}
-            estado = "Oro" if promedio >= 4.5 else "Plata" if promedio >= 3.8 else "Bronce"
-            salud = int((promedio / 5) * 100)
-            adn_calculado.append({"Área": area, "Puntaje": promedio, "Pieza": mapeo_p.get(area), "Estado": estado, "Salud": salud})
-        return pd.DataFrame(adn_calculado)
-    except Exception as e:
-        st.error(f"Error: {e}"); return None
-
-# --- 6. NAVEGACIÓN ---
+# --- 5. NAVEGACIÓN ---
 if st.session_state['view'] == 'mision':
     st.markdown("## ⚒️ FORJA DE REPARACIÓN")
-    if st.session_state['mision_ia']:
-        st.markdown(f'<div class="pergamino">{st.session_state["mision_ia"]}</div>', unsafe_allow_html=True)
-    
-    if st.button("TERMINAR REPARACIÓN Y VOLVER"):
+    st.markdown(f'<div class="pergamino">{st.session_state["mision_ia"]}</div>', unsafe_allow_html=True)
+    if st.button("VOLVER AL DASHBOARD"):
         st.session_state['view'] = 'dashboard'
         st.rerun()
 
 else:
     st.title("🛡️ TITÁN ESTUDIANTE: El Despertar")
     st.markdown("---")
-    archivo = st.file_uploader("Cargue el Excel de Notas", type=["xlsx"])
+    archivo = st.file_uploader("Cargue el archivo de Notas (Cualquier formato)", type=["xlsx"])
 
     if archivo:
-        df_adn = procesar_adn(archivo)
+        # Solo procesamos si los datos no han sido cargados o es un archivo nuevo
+        if st.session_state['df_adn'] is None:
+            with st.spinner("La IA está descifrando el ADN Académico..."):
+                st.session_state['df_adn'] = procesar_adn_con_ia(archivo)
+        
+        df_adn = st.session_state['df_adn']
+        
         if df_adn is not None:
             promedio_gral = df_adn['Puntaje'].mean()
             
-            # Avatar
+            # Avatar y Rango
             if promedio_gral >= 4.5: rango, color_r = "TITÁN LEGENDARIO", "#d4af37"
             elif promedio_gral >= 3.8: rango, color_r = "GUERRERO VETERANO", "#7f8c8d"
             else: rango, color_r = "RECLUTA EN FORJA", "#a0522d"
@@ -146,10 +151,9 @@ else:
                     mas_critica = vulnerables.loc[vulnerables['Puntaje'].idxmin()]
                     
                     if st.button(f"🔥 Forjar Reparación: {mas_critica['Área']}"):
-                        if st.session_state['api_key_configurada']:
-                            with st.spinner("Conectando con el Oráculo..."):
-                                st.session_state['mision_ia'] = generar_mision_con_ia(mas_critica['Área'])
-                                st.session_state['view'] = 'mision'
-                                st.rerun()
-                        else:
-                            st.warning("⚠️ El Oráculo no tiene energía. Pega la API Key en la barra lateral.")
+                        with st.spinner("Generando desafío personalizado..."):
+                            st.session_state['mision_ia'] = generar_mision_con_ia(mas_critica['Área'])
+                            st.session_state['view'] = 'mision'
+                            st.rerun()
+                else:
+                    st.success("✅ Integridad Total.")

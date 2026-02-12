@@ -10,18 +10,18 @@ st.markdown("""
     <style>
     /* Fondo principal: Gris oscuro suave (no negro) */
     .stApp { 
-        background-color: #798e9e; 
+        background-color: #f7f7f7; 
         color: #e0e0e0; 
     }
     
     /* Barra lateral: Un tono un poco más oscuro para dar contraste */
     [data-testid="stSidebar"] { 
-        background-color: #111318; 
+        background-color: #f7f7f7; 
     }
     
     /* Tarjetas de métricas: Bordes sutiles y fondo sólido */
     .stMetric { 
-        background-color: #d9d6c9; 
+        background-color: #f7f7f7; 
         border: 1px solid #3d4156; 
         padding: 10px; 
         border-radius: 12px; 
@@ -125,18 +125,31 @@ if archivo:
             fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color="white")
             st.plotly_chart(fig, use_container_width=True)
 
-        with col2:
+
+with col2:
             st.subheader("🧠 Diagnóstico de la IA")
-            pieza_debil = df_adn.loc[df_adn['Puntaje'].idxmin()]
             
-            st.error(f"**Punto de Quiebre detectado:** Tu {pieza_debil['Pieza']} está vulnerable.")
-            st.write(f"La competencia de **{pieza_debil['Área']}** necesita refuerzo inmediato para evitar el colapso de la armadura.")
+            # Filtramos todas las piezas que están en nivel Bronce (menor a 3.8)
+            piezas_vulnerables = df_adn[df_adn['Puntaje'] < 3.8]
+            
+            if not piezas_vulnerables.empty:
+                for _, row in piezas_vulnerables.iterrows():
+                    st.error(f"⚠️ **Punto de Quiebre:** Tu {row['Pieza']} ({row['Área']}) está vulnerable.")
+                
+                st.write("El taller sugiere misiones de refuerzo inmediatas para estas áreas.")
+            else:
+                st.success("✅ **Integridad Total:** No se detectan puntos de quiebre. ¡La armadura resiste!")
             
             st.markdown("---")
             st.subheader("⚒️ Taller de Mentores")
-            if st.button("🔥 FORJAR MISIÓN DE REPARACIÓN"):
-                st.balloons()
-                st.success(f"¡Misiones de {pieza_debil['Área']} enviadas al pergamino de Salvador!")
+            # Si hay debilidades, el botón de reparación se enfoca en la más crítica
+            if not piezas_vulnerables.empty:
+                mas_critica = piezas_vulnerables.loc[piezas_vulnerables['Puntaje'].idxmin()]
+                if st.button(f"🔥 Forjar Reparación: {mas_critica['Área']}"):
+                    st.success(f"Misión de {mas_critica['Área']} enviada al pergamino.")
+            else:
+                st.write("Sin reparaciones pendientes.")
+
 
             st.markdown("---")
             st.subheader("🏆 Gesta del Clan (Incentivo)")

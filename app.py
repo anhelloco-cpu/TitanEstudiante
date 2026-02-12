@@ -7,12 +7,12 @@ import json
 # 1. --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Titán Estudiante - Dashboard", layout="wide", page_icon="🛡️")
 
-# Persistencia de datos
+# Memoria de navegación
 if 'view' not in st.session_state: st.session_state['view'] = 'dashboard'
 if 'df_adn' not in st.session_state: st.session_state['df_adn'] = None
 if 'mision_ia' not in st.session_state: st.session_state['mision_ia'] = ""
 
-# --- 2. ESTILOS (Fondo Blanco y Letras Oscuras) ---
+# --- 2. ESTILOS (Blanco Moderno) ---
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; color: #2b2d33; }
@@ -20,7 +20,7 @@ st.markdown("""
     .stMetric { background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 12px; }
     .alerta-daño { color: #ff4b4b; font-weight: bold; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-    .pergamino { background-color: #fffcf5; color: #2b2d33; padding: 25px; border-radius: 10px; border: 1px solid #d4af37; border-left: 8px solid #d4af37; }
+    .pergamino { background-color: #fffcf5; color: #2b2d33; padding: 25px; border-radius: 10px; border-left: 8px solid #d4af37; border: 1px solid #eee; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -32,41 +32,49 @@ with st.sidebar:
         if key:
             try:
                 genai.configure(api_key=key)
-                # Intentamos el nombre más compatible para evitar el 404
-                try:
-                    model = genai.GenerativeModel('gemini-1.5-flash')
-                    # Prueba rápida silenciosa
-                    model.generate_content("Hola")
-                except:
-                    model = genai.GenerativeModel('models/gemini-1.5-flash')
-                st.success("Oráculo Conectado")
+                # Lógica para evitar el 404: Probamos nombres alternativos
+                model_found = False
+                for model_name in ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-pro']:
+                    try:
+                        temp_model = genai.GenerativeModel(model_name)
+                        temp_model.generate_content("test") # Prueba rápida
+                        st.session_state['model'] = temp_model
+                        model_found = True
+                        break
+                    except:
+                        continue
+                
+                if model_found:
+                    st.success("Oráculo Conectado")
+                else:
+                    st.error("No se encontró un modelo compatible en esta cuenta.")
             except Exception as e:
                 st.error(f"Error de conexión: {e}")
 
-# --- 4. MOTOR DE ADN INTELIGENTE ---
+# --- 4. MOTOR DE ADN INTELIGENTE (Descifra Miguel.xlsx o Notas Colegio) ---
 def descifrar_adn_con_ia(file):
-    if not key: return None
+    if 'model' not in st.session_state: return None
     try:
         df_raw = pd.read_excel(file)
-        # Convertimos una muestra a CSV para que la IA entienda el formato de Miguel/Salvador
-        data_preview = df_raw.head(25).to_csv(index=False)
+        # Tomamos muestra de datos para que la IA identifique las columnas de Miguel
+        data_preview = df_raw.head(30).to_csv(index=False)
         
         prompt = f"""
-        Actúa como el 'Decodificador de ADN Académico'. Analiza estos datos:
+        Actúa como el 'Decodificador de ADN Académico'. Analiza estos datos reales:
         {data_preview}
 
         TAREA:
         1. Identifica las notas de: Matemáticas, Lectura Crítica, Ciencias Naturales, Sociales y Ciudadanas, Inglés.
-        2. Detecta la escala: Si es 0-500 (ICFES), 0-100 o 0-5.
-        3. Normaliza todo a una escala de 0.0 a 5.0.
-        4. Si hay varios componentes (Física, Química), promedia.
-        5. Devuelve EXCLUSIVAMENTE un JSON:
+        2. Detecta la escala: Si ves números como 60, 300 o 70, es escala ICFES (0-100 o 0-500). Normalízalos a 0.0-5.0.
+        3. Si ves números como 3.5, 4.2, ya están en escala 0-5.
+        4. Si una materia tiene varios componentes (ej. Física, Química), promedia.
+        5. Devuelve UNICAMENTE un JSON (sin texto extra):
         [
           {{"Área": "Matemáticas", "Puntaje": 4.2}},
-          ...
+          ... (las 5 áreas)
         ]
         """
-        response = model.generate_content(prompt)
+        response = st.session_state['model'].generate_content(prompt)
         # Limpieza de JSON
         raw_text = response.text.replace('```json', '').replace('```', '').strip()
         adn_data = json.loads(raw_text)
@@ -95,7 +103,7 @@ else:
 
     if archivo:
         if st.session_state['df_adn'] is None:
-            with st.spinner("La IA está descifrando el ADN..."):
+            with st.spinner("La IA está descifrando el ADN de Miguel..."):
                 st.session_state['df_adn'] = descifrar_adn_con_ia(archivo)
         
         df_adn = st.session_state['df_adn']
@@ -128,8 +136,8 @@ else:
                     st.error(f"⚠️ Punto de Quiebre: {mas_critica['Pieza']} ({mas_critica['Área']})")
                     
                     if st.button("🔥 Forjar Reparación"):
-                        with st.spinner("Generando reto épico..."):
-                            res = model.generate_content(f"Crea un reto tipo ICFES de {mas_critica['Área']} nivel avanzado.")
+                        with st.spinner("Generando reto personalizado..."):
+                            res = st.session_state['model'].generate_content(f"Crea un reto tipo ICFES de {mas_critica['Área']} nivel avanzado.")
                             st.session_state['mision_ia'] = res.text
                             st.session_state['view'] = 'mision'
                             st.rerun()

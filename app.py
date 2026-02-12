@@ -10,7 +10,7 @@ st.markdown("""
     <style>
     /* Fondo principal: Gris oscuro suave (no negro) */
     .stApp { 
-        background-color: #1a1c24; 
+        background-color: #798e9e; 
         color: #e0e0e0; 
     }
     

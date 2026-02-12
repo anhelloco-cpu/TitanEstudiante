@@ -2,34 +2,27 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Configuración de la página
+# 1. --- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Titán Estudiante - Dashboard", layout="wide", page_icon="🛡️")
 
-# --- ESTILOS VISUALES MODERNOS (Gris Oxford) ---
+# Inicializar el estado de navegación (Para no borrar el Dashboard al entrar a la misión)
+if 'view' not in st.session_state:
+    st.session_state['view'] = 'dashboard'
+
+# --- 2. ESTILOS VISUALES MODERNOS (Gris Oxford) ---
 st.markdown("""
     <style>
-    /* Fondo principal: Gris oscuro suave (no negro) */
-    .stApp { 
-        background-color: #f7f7f7; 
-        color: #e0e0e0; 
-    }
-    
-    /* Barra lateral: Un tono un poco más oscuro para dar contraste */
-    [data-testid="stSidebar"] { 
-        background-color: #f7f7f7; 
-    }
-    
-    /* Tarjetas de métricas: Bordes sutiles y fondo sólido */
-    .stMetric { 
-        background-color: #f7f7f7; 
-        border: 1px solid #3d4156; 
-        padding: 10px; 
-        border-radius: 12px; 
-    }
+    .stApp { background-color: #1a1c24; color: #e0e0e0; }
+    [data-testid="stSidebar"] { background-color: #111318; }
+    .stMetric { background-color: #262936; border: 1px solid #3d4156; padding: 10px; border-radius: 12px; }
+    .alerta-daño { color: #ff4b4b; font-weight: bold; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+    /* Estilo Pergamino para la Misión */
+    .pergamino { background-color: #fdf5e6; color: #2b2d33; padding: 25px; border-radius: 10px; border-left: 8px solid #d4af37; margin-bottom: 20px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- LÓGICA DE PROCESAMIENTO ---
+# --- 3. LÓGICA DE PROCESAMIENTO ---
 def procesar_adn(file):
     try:
         df = pd.read_excel(file)
@@ -51,121 +44,117 @@ def procesar_adn(file):
         for area, lista_comp in mapping.items():
             sub_df = df[df['COMPONENTE'].isin(lista_comp)]
             promedio = round(sub_df['PROMEDIO'].mean(), 2) if not sub_df.empty else 0.0
-            
-            mapeo_piezas = {
-                "Matemáticas": "Peto", "Lectura Crítica": "Yelmo", 
-                "Ciencias Naturales": "Grebas", "Sociales y Ciudadanas": "Escudo", "Inglés": "Guantelete"
-            }
-            
+            mapeo_piezas = {"Matemáticas": "Peto", "Lectura Crítica": "Yelmo", "Ciencias Naturales": "Grebas", "Sociales y Ciudadanas": "Escudo", "Inglés": "Guantelete"}
             estado = "Oro" if promedio >= 4.5 else "Plata" if promedio >= 3.8 else "Bronce"
-            # Salud basada en el puntaje
             salud = int((promedio / 5) * 100)
-            
-            adn_calculado.append({
-                "Área": area, "Puntaje": promedio, "Pieza": mapeo_piezas.get(area), "Estado": estado, "Salud": salud
-            })
-        
+            adn_calculado.append({"Área": area, "Puntaje": promedio, "Pieza": mapeo_piezas.get(area), "Estado": estado, "Salud": salud})
         return pd.DataFrame(adn_calculado)
     except Exception as e:
         st.error(f"Error en el motor: {e}")
         return None
 
-# --- INTERFAZ ---
-st.title("🛡️ TITÁN ESTUDIANTE: El Despertar")
-st.markdown("---")
-
-archivo = st.file_uploader("Cargue el Excel de Notas para despertar al Titán", type=["xlsx"])
-
-if archivo:
-    df_adn = procesar_adn(archivo)
+# --- 4. FUNCIÓN DEL SIMULADOR DE EXAMEN (ICFES) ---
+def mostrar_simulador_mision():
+    st.markdown("## ⚒️ Misión de Reparación: Lectura Crítica")
+    st.write("Demuestra tu sabiduría para restaurar la integridad del Yelmo.")
     
-    if df_adn is not None:
-        promedio_gral = df_adn['Puntaje'].mean()
-        
-    # --- LÓGICA DE AVATAR (Imagen de Freepik en todas las categorías) ---
-        if promedio_gral >= 4.5:
-            rango = "TITÁN LEGENDARIO"
-            img_url = "https://www.freepik.com/premium-psd/ornate-medieval-armor-knights-cuirass_412654456.htm"
-            color_rango = "#FFD700"
-        elif promedio_gral >= 3.8:
-            rango = "GUERRERO VETERANO"
-            img_url = "https://www.freepik.com/premium-psd/ornate-medieval-armor-knights-cuirass_412654456.htm"
-            color_rango = "#C0C0C0"
+    st.markdown("""
+    <div class="pergamino">
+        <h4>TEXTO DE APOYO (ICFES 2025)</h4>
+        <p>"El 7 de agosto de 1819 se libró en el Puente de Boyacá una de las batallas de mayor importancia para la gesta libertadora. 
+        Este espacio, más que una estructura física, se erige como un <b>patrimonio inmaterial</b> que permite la cohesión de la identidad nacional."</p>
+        <hr>
+        <b>PREGUNTA:</b> Según el texto, cuando el autor menciona que el Puente es un 'patrimonio inmaterial', se refiere a que:
+    </div>
+    """, unsafe_allow_html=True)
+    
+    respuesta = st.radio("Selecciona la opción correcta:", [
+        "A. El puente ya no existe físicamente y solo vive en los libros.",
+        "B. Su valor histórico y simbólico trasciende la construcción de piedra.",
+        "C. Fue construido con materiales invisibles para la época.",
+        "D. No tiene ninguna importancia para el departamento del Boyacá."
+    ])
+    
+    if st.button("ENTREGAR RESPUESTA"):
+        if "B." in respuesta:
+            st.success("✨ ¡FORJA EXITOSA! Has reparado la pieza con éxito.")
+            if st.button("VOLVER AL DASHBOARD"):
+                st.session_state['view'] = 'dashboard'
+                st.rerun()
         else:
-            rango = "RECLUTA EN FORJA"
-            img_url = "https://www.freepik.com/premium-psd/ornate-medieval-armor-knights-cuirass_412654456.htm"
-            color_rango = "#CD7F32"
+            st.error("❌ RESPUESTA INCORRECTA. Tu Yelmo sigue agrietado. Analiza mejor el concepto de 'Simbólico'.")
 
-        # Sidebar con el Guerrero
-        with st.sidebar:
-            st.markdown(f"<h1 style='text-align: center; color: {color_rango};'>{rango}</h1>", unsafe_allow_html=True)
-            st.image(img_url, use_column_width=True)
-            st.metric("PODER TOTAL", round(promedio_gral, 2))
-            st.divider()
-            st.write("📍 **Clan:** Grado 10-A")
-            st.write("🏰 **Santuario:** Protegido")
-
-        # Main Dashboard
-        col1, col2 = st.columns([1, 1])
-
-        with col1:
-            st.subheader("⚔️ Inventario de Armadura")
-            for _, row in df_adn.iterrows():
-                # Si la pieza está en Bronce, activamos la alerta visual
-                if row['Estado'] == "Bronce":
-
-# Busca la línea dentro del if row['Estado'] == "Bronce":
-                    st.markdown(f"<span style='color: #00262e;'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}**</span> | <span class='alerta-daño'>¡PIEZA DAÑADA!</span>", unsafe_allow_html=True)
-
-                    # (A ELIMINAR)st.markdown(f"**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | <span class='alerta-daño'>¡PIEZA DAÑADA!</span>", unsafe_allow_html=True)
-                else:
-# Aquí puedes poner el color que quieras (ejemplo: #00d4ff para un azul cian)
-                    st.markdown(f"<span style='color: #00262e;'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | Nivel {row['Estado']}</span>", unsafe_allow_html=True)
-
-                    # (A ELIMINAR) st.write(f"**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | Nivel {row['Estado']}")
-                st.progress(row['Salud'] / 100)
-            
-            st.divider()
-            # Radar Chart estilizado
-            fig = px.line_polar(df_adn, r='Puntaje', theta='Área', line_close=True, range_r=[0,5])
-            fig.update_traces(fill='toself', line_color=color_rango)
-            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color="white")
-            st.plotly_chart(fig, use_container_width=True)
-
-
-
-        with col2:
-            st.subheader("🧠 Diagnóstico de la IA")
-            
-            # Filtramos todas las piezas que están en nivel Bronce (menor a 3.8)
-            piezas_vulnerables = df_adn[df_adn['Puntaje'] < 3.8]
-            
-            if not piezas_vulnerables.empty:
-                for _, row in piezas_vulnerables.iterrows():
-                    st.error(f"⚠️ **Punto de Quiebre:** Tu {row['Pieza']} ({row['Área']}) está vulnerable.")
-                
-                st.write("El taller sugiere misiones de refuerzo inmediatas para estas áreas.")
-            else:
-                st.success("✅ **Integridad Total:** No se detectan puntos de quiebre. ¡La armadura resiste!")
-            
-            st.markdown("---")
-            st.subheader("⚒️ Taller de Mentores")
-            # Si hay debilidades, el botón de reparación se enfoca en la más crítica
-            if not piezas_vulnerables.empty:
-                mas_critica = piezas_vulnerables.loc[piezas_vulnerables['Puntaje'].idxmin()]
-                if st.button(f"🔥 Forjar Reparación: {mas_critica['Área']}"):
-                    st.success(f"Misión de {mas_critica['Área']} enviada al pergamino.")
-            else:
-                st.write("Sin reparaciones pendientes.")
-
-
-            st.markdown("---")
-            st.subheader("🏆 Gesta del Clan (Incentivo)")
-            st.write("**Meta Grupal:** Salida a Cine")
-            st.progress(65)
-            st.caption("Falta un 35% de esfuerzo colectivo para desbloquear el tesoro.")
-
+# --- 5. LÓGICA DE NAVEGACIÓN ---
+if st.session_state['view'] == 'mision':
+    mostrar_simulador_mision()
 else:
-    st.info("Esperando el ADN Académico... Por favor cargue el archivo Excel.")
-    st.sidebar.image("https://cdn-icons-png.flaticon.com/512/1144/1144760.png", width=200)
-    st.sidebar.caption("Avatar pendiente de evolución")
+    # --- INTERFAZ DASHBOARD (Tu código original) ---
+    st.title("🛡️ TITÁN ESTUDIANTE: El Despertar")
+    st.markdown("---")
+
+    archivo = st.file_uploader("Cargue el Excel de Notas para despertar al Titán", type=["xlsx"])
+
+    if archivo:
+        df_adn = procesar_adn(archivo)
+        if df_adn is not None:
+            promedio_gral = df_adn['Puntaje'].mean()
+            
+            # --- LÓGICA DE AVATAR ---
+            if promedio_gral >= 4.5: rango, color_rango = "TITÁN LEGENDARIO", "#FFD700"
+            elif promedio_gral >= 3.8: rango, color_rango = "GUERRERO VETERANO", "#C0C0C0"
+            else: rango, color_rango = "RECLUTA EN FORJA", "#CD7F32"
+            
+            img_url = "https://www.freepik.com/premium-psd/ornate-medieval-armor-knights-cuirass_412654456.htm"
+
+            with st.sidebar:
+                st.markdown(f"<h1 style='text-align: center; color: {color_rango};'>{rango}</h1>", unsafe_allow_html=True)
+                st.image(img_url, use_column_width=True)
+                st.metric("PODER TOTAL", round(promedio_gral, 2))
+                st.divider()
+                st.write("📍 **Clan:** Grado 10-A")
+                st.write("🏰 **Santuario:** Protegido")
+
+            col1, col2 = st.columns([1, 1])
+
+            with col1:
+                st.subheader("⚔️ Inventario de Armadura")
+                for _, row in df_adn.iterrows():
+                    if row['Estado'] == "Bronce":
+                        st.markdown(f"<span style='color: #ff4b4b;'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}**</span> | <span class='alerta-daño'>¡PIEZA DAÑADA!</span>", unsafe_allow_html=True)
+                    else:
+                        color_texto = "#FFD700" if row['Estado'] == "Oro" else "#00D4FF"
+                        st.markdown(f"<span style='color: {color_texto};'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | Nivel {row['Estado']}</span>", unsafe_allow_html=True)
+                    st.progress(row['Salud'] / 100)
+                
+                st.divider()
+                fig = px.line_polar(df_adn, r='Puntaje', theta='Área', line_close=True, range_r=[0,5])
+                fig.update_traces(fill='toself', line_color=color_rango)
+                fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color="white", polar=dict(bgcolor="rgba(0,0,0,0)"))
+                st.plotly_chart(fig, use_container_width=True)
+
+            with col2:
+                st.subheader("🧠 Diagnóstico de la IA")
+                piezas_vulnerables = df_adn[df_adn['Puntaje'] < 3.8]
+                if not piezas_vulnerables.empty:
+                    for _, row in piezas_vulnerables.iterrows():
+                        st.error(f"⚠️ **Punto de Quiebre:** Tu {row['Pieza']} ({row['Área']}) está vulnerable.")
+                    
+                    st.markdown("---")
+                    st.subheader("⚒️ Taller de Mentores")
+                    mas_critica = piezas_vulnerables.loc[piezas_vulnerables['Puntaje'].idxmin()]
+                    
+                    # AQUÍ ESTÁ EL CAMBIO: El botón ahora activa la Misión
+                    if st.button(f"🔥 Forjar Reparación: {mas_critica['Área']}"):
+                        st.session_state['view'] = 'mision'
+                        st.rerun()
+                else:
+                    st.success("✅ **Integridad Total:** La armadura resiste.")
+
+                st.markdown("---")
+                st.subheader("🏆 Gesta del Clan")
+                st.write("**Meta Grupal:** Salida a Cine")
+                st.progress(65)
+
+    else:
+        st.info("Esperando el ADN Académico...")
+        st.sidebar.image("https://cdn-icons-png.flaticon.com/512/1144/1144760.png", width=200)

@@ -5,6 +5,16 @@ import plotly.express as px
 # Configuración de la página
 st.set_page_config(page_title="Titán Estudiante - Dashboard", layout="wide", page_icon="🛡️")
 
+# --- ESTILOS VISUALES (LOOK & FEEL GAMING) ---
+st.markdown("""
+    <style>
+    .stApp { background-color: #0e1117; color: white; }
+    .stMetric { background-color: #1c2030; border: 1px solid #3d4156; padding: 10px; border-radius: 10px; }
+    .alerta-daño { color: #ff4b4b; font-weight: bold; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+    </style>
+    """, unsafe_allow_html=True)
+
 # --- LÓGICA DE PROCESAMIENTO ---
 def procesar_adn(file):
     try:
@@ -34,9 +44,11 @@ def procesar_adn(file):
             }
             
             estado = "Oro" if promedio >= 4.5 else "Plata" if promedio >= 3.8 else "Bronce"
+            # Salud basada en el puntaje
+            salud = int((promedio / 5) * 100)
             
             adn_calculado.append({
-                "Área": area, "Puntaje": promedio, "Pieza": mapeo_piezas.get(area), "Estado": estado
+                "Área": area, "Puntaje": promedio, "Pieza": mapeo_piezas.get(area), "Estado": estado, "Salud": salud
             })
         
         return pd.DataFrame(adn_calculado)
@@ -46,7 +58,7 @@ def procesar_adn(file):
 
 # --- INTERFAZ ---
 st.title("🛡️ TITÁN ESTUDIANTE: El Despertar")
-st.sidebar.markdown("# Perfil del Guerrero")
+st.markdown("---")
 
 archivo = st.file_uploader("Cargue el Excel de Notas para despertar al Titán", type=["xlsx"])
 
@@ -56,25 +68,25 @@ if archivo:
     if df_adn is not None:
         promedio_gral = df_adn['Puntaje'].mean()
         
-        # --- LÓGICA DE AVATAR ---
+        # --- LÓGICA DE AVATAR (Aquí pones tus imágenes) ---
         if promedio_gral >= 4.5:
-            rango = "GUERRERO LEGENDARIO"
-            img_url = "https://cdn-icons-png.flaticon.com/512/3534/3534063.png" # Icono Oro
+            rango = "TITÁN LEGENDARIO"
+            img_url = "https://img.freepik.com/premium-photo/golden-knight-shining-armor-dramatic-lighting_933496-18012.jpg"
             color_rango = "#FFD700"
         elif promedio_gral >= 3.8:
             rango = "GUERRERO VETERANO"
-            img_url = "https://cdn-icons-png.flaticon.com/512/3534/3534033.png" # Icono Plata
+            img_url = "https://img.freepik.com/premium-photo/knight-silver-armor-posing-dark-background_933496-17495.jpg"
             color_rango = "#C0C0C0"
         else:
-            rango = "RECLUTA EN ENTRENAMIENTO"
-            img_url = "https://cdn-icons-png.flaticon.com/512/3534/3534020.png" # Icono Bronce
+            rango = "RECLUTA EN FORJA"
+            img_url = "https://img.freepik.com/premium-photo/medieval-warrior-standing-battlefield-broken-armor_933496-19200.jpg"
             color_rango = "#CD7F32"
 
-        # Sidebar con Avatar
+        # Sidebar con el Guerrero
         with st.sidebar:
-            st.image(img_url, width=200)
-            st.markdown(f"<h2 style='text-align: center; color: {color_rango};'>{rango}</h2>", unsafe_allow_html=True)
-            st.metric("Poder Total (Promedio)", round(promedio_gral, 2))
+            st.markdown(f"<h1 style='text-align: center; color: {color_rango};'>{rango}</h1>", unsafe_allow_html=True)
+            st.image(img_url, use_column_width=True)
+            st.metric("PODER TOTAL", round(promedio_gral, 2))
             st.divider()
             st.write("📍 **Clan:** Grado 10-A")
             st.write("🏰 **Santuario:** Protegido")
@@ -83,16 +95,20 @@ if archivo:
         col1, col2 = st.columns([1, 1])
 
         with col1:
-            st.subheader("⚔️ Estado de la Armadura")
+            st.subheader("⚔️ Inventario de Armadura")
             for _, row in df_adn.iterrows():
-                # Alerta visual si la pieza está en Bronce
-                emoji = "🔴" if row['Estado'] == "Bronce" else "🟢"
-                st.write(f"{emoji} **{row['Pieza']} ({row['Área']}):** {row['Puntaje']} - *Nivel {row['Estado']}*")
+                # Si la pieza está en Bronce, activamos la alerta visual
+                if row['Estado'] == "Bronce":
+                    st.markdown(f"**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | <span class='alerta-daño'>¡PIEZA DAÑADA!</span>", unsafe_allow_html=True)
+                else:
+                    st.write(f"**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | Nivel {row['Estado']}")
+                st.progress(row['Salud'] / 100)
             
             st.divider()
-            # Radar Chart
+            # Radar Chart estilizado
             fig = px.line_polar(df_adn, r='Puntaje', theta='Área', line_close=True, range_r=[0,5])
             fig.update_traces(fill='toself', line_color=color_rango)
+            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color="white")
             st.plotly_chart(fig, use_container_width=True)
 
         with col2:
@@ -100,21 +116,21 @@ if archivo:
             pieza_debil = df_adn.loc[df_adn['Puntaje'].idxmin()]
             
             st.error(f"**Punto de Quiebre detectado:** Tu {pieza_debil['Pieza']} está vulnerable.")
-            st.write(f"La competencia de **{pieza_debil['Área']}** necesita refuerzo inmediato en el Taller de Mentores.")
+            st.write(f"La competencia de **{pieza_debil['Área']}** necesita refuerzo inmediato para evitar el colapso de la armadura.")
             
             st.markdown("---")
             st.subheader("⚒️ Taller de Mentores")
-            if st.button("Forjar Misión de Reparación"):
-                st.success(f"Misión de {pieza_debil['Área']} enviada al pergamino del Guerrero.")
+            if st.button("🔥 FORJAR MISIÓN DE REPARACIÓN"):
+                st.balloons()
+                st.success(f"¡Misiones de {pieza_debil['Área']} enviadas al pergamino de Salvador!")
 
             st.markdown("---")
             st.subheader("🏆 Gesta del Clan (Incentivo)")
             st.write("**Meta Grupal:** Salida a Cine")
             st.progress(65)
-            st.caption("Falta un 35% de esfuerzo colectivo para desbloquear.")
+            st.caption("Falta un 35% de esfuerzo colectivo para desbloquear el tesoro.")
 
 else:
     st.info("Esperando el ADN Académico... Por favor cargue el archivo Excel.")
-    # Imagen de placeholder para el avatar vacío
     st.sidebar.image("https://cdn-icons-png.flaticon.com/512/1144/1144760.png", width=200)
     st.sidebar.caption("Avatar pendiente de evolución")

@@ -68,18 +68,18 @@ if archivo:
     if df_adn is not None:
         promedio_gral = df_adn['Puntaje'].mean()
         
-        # --- LÓGICA DE AVATAR (Aquí pones tus imágenes) ---
+    # --- LÓGICA DE AVATAR (Imagen de Freepik en todas las categorías) ---
         if promedio_gral >= 4.5:
             rango = "TITÁN LEGENDARIO"
-            img_url = "https://www.freepik.com/free-vector/cartoon-knight-boy-holding-sword-shield_52446669.htm#fromView=search&page=1&position=11&uuid=b5de4a17-72af-497f-954b-f8cf1993ef42&query=armadura"
+            img_url = "https://www.freepik.com/premium-psd/ornate-medieval-armor-knights-cuirass_412654456.htm"
             color_rango = "#FFD700"
         elif promedio_gral >= 3.8:
             rango = "GUERRERO VETERANO"
-            img_url = "https://www.freepik.com/free-vector/cartoon-knight-boy-holding-sword-shield_52446669.htm#fromView=search&page=1&position=11&uuid=b5de4a17-72af-497f-954b-f8cf1993ef42&query=armadura"
+            img_url = "https://www.freepik.com/premium-psd/ornate-medieval-armor-knights-cuirass_412654456.htm"
             color_rango = "#C0C0C0"
         else:
             rango = "RECLUTA EN FORJA"
-            img_url = "https://www.freepik.com/free-vector/cartoon-knight-boy-holding-sword-shield_52446669.htm#fromView=search&page=1&position=11&uuid=b5de4a17-72af-497f-954b-f8cf1993ef42&query=armadura"
+            img_url = "https://www.freepik.com/premium-psd/ornate-medieval-armor-knights-cuirass_412654456.htm"
             color_rango = "#CD7F32"
 
         # Sidebar con el Guerrero

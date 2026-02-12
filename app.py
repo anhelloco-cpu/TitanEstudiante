@@ -5,7 +5,7 @@ import google.generativeai as genai
 
 # --- 1. CONFIGURACIÓN DE LA IA TITÁN (API KEY) ---
 # Pega tu clave aquí o ponla en el buscador de la App para que sea secreta
-API_KEY = "AIzaSyChO-jy8Ehl26b6R1AV7JAEqe7sBP4d6Ww" 
+API_KEY = st.secrets["GEMINI_API_KEY"]
 
 if API_KEY != "TU_API_KEY_AQUÍ":
     genai.configure(api_key=API_KEY)

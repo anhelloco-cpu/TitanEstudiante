@@ -115,14 +115,17 @@ if archivo:
                 if row['Estado'] == "Bronce":
                     st.markdown(f"**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | <span class='alerta-daño'>¡PIEZA DAÑADA!</span>", unsafe_allow_html=True)
                 else:
-                    st.write(f"**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | Nivel {row['Estado']}")
+# Aquí puedes poner el color que quieras (ejemplo: #00d4ff para un azul cian)
+                    st.markdown(f"<span style='color: #00262e;'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | Nivel {row['Estado']}</span>", unsafe_allow_html=True)
+
+                    # st.write(f"**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | Nivel {row['Estado']}")
                 st.progress(row['Salud'] / 100)
             
             st.divider()
             # Radar Chart estilizado
             fig = px.line_polar(df_adn, r='Puntaje', theta='Área', line_close=True, range_r=[0,5])
             fig.update_traces(fill='toself', line_color=color_rango)
-            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color="black")
+            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color="white")
             st.plotly_chart(fig, use_container_width=True)
 
 

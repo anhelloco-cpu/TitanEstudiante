@@ -24,26 +24,22 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. LÓGICA DE LA IA TITÁN (Conexión Reforzada) ---
+# --- 3. LÓGICA DE LA IA TITÁN (Conexión Corregida) ---
 with st.sidebar:
     st.header("🔑 Conexión IA")
     user_api_key = st.text_input("Pega tu API Key de Gemini:", type="password")
     if user_api_key:
         try:
             genai.configure(api_key=user_api_key)
-            # Intentamos con el modelo Flash 1.5
-            # Si el servidor da error, saltamos al bloque except
+            # Usamos el modelo con el nombre técnico correcto
             model = genai.GenerativeModel('gemini-1.5-flash')
-            # Prueba rápida de conexión
-            model.generate_content("test") 
-            st.success("IA Titán Conectada (Flash 1.5)")
-        except Exception:
-            try:
-                # Plan B: Si Flash falla, usamos Gemini Pro
-                model = genai.GenerativeModel('gemini-pro')
-                st.warning("IA Conectada en modo Respaldo (Gemini Pro)")
-            except Exception as e:
-                st.error(f"Error crítico de conexión: {e}")
+            st.success("IA Conectada")
+        except Exception as e:
+            st.error(f"Error de configuración: {e}")
+
+def generar_mision_con_ia(area):
+    if not user_api_key: 
+        return "❌ Error: No has ingresado la API Key en la barra lateral."
     
     prompt = f"""
     Eres el Titán Protector, experto en el examen ICFES Saber 11 de Colombia.

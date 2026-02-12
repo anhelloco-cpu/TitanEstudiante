@@ -6,7 +6,7 @@ import json
 import re
 
 # 1. --- CONFIGURACIÓN DE LA PÁGINA ---
-st.set_page_config(page_title="TITÁN ESTUDIANTE v112", layout="wide", page_icon="🛡️")
+st.set_page_config(page_title="TITÁN ESTUDIANTE v113", layout="wide", page_icon="🛡️")
 
 # Inicializar estados de persistencia
 if 'view' not in st.session_state: st.session_state['view'] = 'dashboard'
@@ -36,12 +36,14 @@ st.markdown("""
         font-size: 1.1em; line-height: 1.6;
     }
 
-    /* Caja de diagnóstico organizada */
+    /* Caja de diagnóstico organizada con párrafos claros */
     .diagnostico-caja {
-        background-color: #f8fafc; border-radius: 12px; padding: 20px;
+        background-color: #f8fafc; border-radius: 12px; padding: 25px;
         border: 1px solid #e2e8f0; border-left: 6px solid #1e293b;
-        margin-bottom: 20px; font-size: 1em; line-height: 1.6;
+        margin-bottom: 20px; font-size: 1.05em; line-height: 1.8;
+        color: #1e293b;
     }
+    .diagnostico-caja p { margin-bottom: 15px; }
 
     .alerta-daño { color: #ff4b4b; font-weight: bold; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
@@ -50,7 +52,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. FUNCIONES DE IA (Análisis de Periodos y Misión) ---
+# --- 3. FUNCIONES DE IA (Cerebro del Titán con Análisis de Tendencias) ---
 def procesar_adn_ia(file):
     if 'model' not in st.session_state: return None
     try:
@@ -63,18 +65,21 @@ def procesar_adn_ia(file):
         TAREA:
         1. Identifica las 5 áreas ICFES (Matemáticas, Lectura Crítica, Ciencias Naturales, Sociales, Inglés).
         2. Calcula el promedio actual (normalizado a 0.0-5.0).
-        3. Realiza un DIAGNÓSTICO DE TENDENCIA organizado con iconos (📈, ⚠️, ✅). Analiza el progreso entre AP1 y el último periodo.
+        3. Realiza un DIAGNÓSTICO MAESTRO:
+           - Cada materia analizada DEBE estar en su propio párrafo independiente.
+           - Usa un tono épico pero técnico.
+           - Identifica si el estudiante ha mejorado o decaído en cada una comparando los periodos.
+           - Usa iconos (📈, 📉, 🛡️) al inicio de cada párrafo.
         4. Genera datos para una gráfica de tendencia (Puntaje por Área en cada Periodo).
 
         Devuelve UNICAMENTE un JSON con esta estructura exacta:
         {{
-            "tabla": [ {{"Área": "Matemáticas", "Puntaje": 4.2}}, ... ],
-            "diagnostico_master": "Texto organizado con iconos y saltos de línea...",
+            "tabla": [ {{"Área": "Materia", "Puntaje": 4.2}}, ... ],
+            "diagnostico_master": "Párrafo 1... \\n\\n Párrafo 2... \\n\\n Párrafo 3...",
             "historico": [ {{"Periodo": "AP1", "Área": "Matemáticas", "Puntaje": 4.0}}, ... ]
         }}
         """
         response = st.session_state['model'].generate_content(prompt)
-        # Limpieza de JSON por si la IA agrega texto
         match = re.search(r'\{.*\}', response.text, re.DOTALL)
         data_packet = json.loads(match.group())
         
@@ -203,6 +208,7 @@ else:
 
             with col2:
                 st.subheader("🧠 Diagnóstico del Oráculo")
+                # Diagnóstico organizado por párrafos
                 if st.session_state['diagnostico_detallado']:
                     st.markdown(f"<div class='diagnostico-caja'>{st.session_state['diagnostico_detallado']}</div>", unsafe_allow_html=True)
 
@@ -210,11 +216,18 @@ else:
                 if st.session_state['df_historico'] is not None:
                     st.markdown("#### 📈 Evolución por Periodos")
                     fig_trend = px.line(st.session_state['df_historico'], x="Periodo", y="Puntaje", color="Área", markers=True)
-                    fig_trend.update_layout(plot_bgcolor="white", paper_bgcolor="rgba(0,0,0,0)", height=300, yaxis_range=[0,5.2])
+                    fig_trend.update_layout(
+                        plot_bgcolor="white", 
+                        paper_bgcolor="rgba(0,0,0,0)", 
+                        height=350, 
+                        yaxis_range=[0,5.2],
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                    )
                     st.plotly_chart(fig_trend, use_container_width=True)
 
                 vulnerables = df[df['Puntaje'] < 3.8]
                 if not vulnerables.empty:
+                    st.divider()
                     mas_debil = vulnerables.loc[vulnerables['Puntaje'].idxmin()]
                     for _, row in vulnerables.iterrows():
                         if row['Área'] == mas_debil['Área']:

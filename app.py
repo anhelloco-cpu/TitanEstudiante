@@ -34,12 +34,26 @@ with st.sidebar:
         st.success("IA Conectada")
 
 def generar_mision_con_ia(area):
-    if not user_api_key: return "Introduce la API Key para generar el reto."
-    prompt = f"Actúa como el Titán Académico. Genera una pregunta tipo ICFES de {area} con: Un texto corto, una pregunta de selección múltiple (A,B,C,D) y la respuesta correcta explicada."
+    if not user_api_key: 
+        return "❌ Error: No has ingresado la API Key en la barra lateral."
+    
+    # Instrucciones maestras basadas en tus PDFs
+    prompt = f"""
+    Eres el Titán Protector, experto en el examen ICFES Saber 11 de Colombia.
+    Analiza la debilidad en {area}. 
+    Genera una misión de entrenamiento real:
+    1. Un texto de análisis (basado en la complejidad de los cuadernillos 2024/2025).
+    2. Una pregunta de selección múltiple (A, B, C, D).
+    3. Indica la respuesta correcta y una breve explicación técnica.
+    Usa un lenguaje motivador de guerrero.
+    """
+    
     try:
         response = model.generate_content(prompt)
         return response.text
-    except: return "Error conectando con el oráculo."
+    except Exception as e:
+        # Esto nos dirá el error real (si es la llave, el modelo o el internet)
+        return f"⚠️ El Oráculo dice: {str(e)}"
 
 # --- 4. LÓGICA DE PROCESAMIENTO ADN (Tu código original) ---
 def procesar_adn(file):

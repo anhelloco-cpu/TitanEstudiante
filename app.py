@@ -113,12 +113,16 @@ if archivo:
             for _, row in df_adn.iterrows():
                 # Si la pieza está en Bronce, activamos la alerta visual
                 if row['Estado'] == "Bronce":
-                    st.markdown(f"**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | <span class='alerta-daño'>¡PIEZA DAÑADA!</span>", unsafe_allow_html=True)
+
+# Busca la línea dentro del if row['Estado'] == "Bronce":
+                    st.markdown(f"<span style='color: #00262e;'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}**</span> | <span class='alerta-daño'>¡PIEZA DAÑADA!</span>", unsafe_allow_html=True)
+
+                    # (A ELIMINAR)st.markdown(f"**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | <span class='alerta-daño'>¡PIEZA DAÑADA!</span>", unsafe_allow_html=True)
                 else:
 # Aquí puedes poner el color que quieras (ejemplo: #00d4ff para un azul cian)
                     st.markdown(f"<span style='color: #00262e;'>**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | Nivel {row['Estado']}</span>", unsafe_allow_html=True)
 
-                    # st.write(f"**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | Nivel {row['Estado']}")
+                    # (A ELIMINAR) st.write(f"**{row['Pieza']}** ({row['Área']}): **{row['Puntaje']}** | Nivel {row['Estado']}")
                 st.progress(row['Salud'] / 100)
             
             st.divider()

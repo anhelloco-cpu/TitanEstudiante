@@ -71,15 +71,15 @@ if archivo:
         # --- LÓGICA DE AVATAR (Aquí pones tus imágenes) ---
         if promedio_gral >= 4.5:
             rango = "TITÁN LEGENDARIO"
-            img_url = "https://img.freepik.com/premium-photo/golden-knight-shining-armor-dramatic-lighting_933496-18012.jpg"
+            img_url = "https://www.freepik.com/free-vector/cartoon-knight-boy-holding-sword-shield_52446669.htm#fromView=search&page=1&position=11&uuid=b5de4a17-72af-497f-954b-f8cf1993ef42&query=armadura"
             color_rango = "#FFD700"
         elif promedio_gral >= 3.8:
             rango = "GUERRERO VETERANO"
-            img_url = "https://img.freepik.com/premium-photo/knight-silver-armor-posing-dark-background_933496-17495.jpg"
+            img_url = "https://www.freepik.com/free-vector/cartoon-knight-boy-holding-sword-shield_52446669.htm#fromView=search&page=1&position=11&uuid=b5de4a17-72af-497f-954b-f8cf1993ef42&query=armadura"
             color_rango = "#C0C0C0"
         else:
             rango = "RECLUTA EN FORJA"
-            img_url = "https://img.freepik.com/premium-photo/medieval-warrior-standing-battlefield-broken-armor_933496-19200.jpg"
+            img_url = "https://www.freepik.com/free-vector/cartoon-knight-boy-holding-sword-shield_52446669.htm#fromView=search&page=1&position=11&uuid=b5de4a17-72af-497f-954b-f8cf1993ef42&query=armadura"
             color_rango = "#CD7F32"
 
         # Sidebar con el Guerrero

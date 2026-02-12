@@ -6,11 +6,12 @@ import json
 import re
 
 # 1. --- CONFIGURACIÓN DE LA PÁGINA ---
-st.set_page_config(page_title="TITÁN ESTUDIANTE v111", layout="wide", page_icon="🛡️")
+st.set_page_config(page_title="TITÁN ESTUDIANTE v112", layout="wide", page_icon="🛡️")
 
 # Inicializar estados de persistencia
 if 'view' not in st.session_state: st.session_state['view'] = 'dashboard'
 if 'df_adn' not in st.session_state: st.session_state['df_adn'] = None
+if 'df_historico' not in st.session_state: st.session_state['df_historico'] = None
 if 'diagnostico_detallado' not in st.session_state: st.session_state['diagnostico_detallado'] = ""
 if 'mision_data' not in st.session_state: st.session_state['mision_data'] = None
 if 'progreso_mision' not in st.session_state:
@@ -38,6 +39,7 @@ st.markdown("""
     .diagnostico-caja {
         background-color: #f0f2f6; border-radius: 10px; padding: 20px;
         border-left: 5px solid #2b2d33; margin-bottom: 20px; font-size: 0.95em;
+        line-height: 1.5;
     }
 
     .alerta-daño { color: #ff4b4b; font-weight: bold; animation: pulse 1.5s infinite; }
@@ -47,29 +49,27 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. FUNCIONES DE IA (Cerebro del Titán con Análisis de Periodos) ---
+# --- 3. FUNCIONES DE IA (Cerebro del Titán con Análisis de Tendencias) ---
 def procesar_adn_ia(file):
     if 'model' not in st.session_state: return None
     try:
         df_raw = pd.read_excel(file)
-        # Enviamos una muestra más amplia para que la IA vea las columnas AP1, AP2, etc.
         csv_full_sample = df_raw.head(40).to_csv(index=False)
         
-        prompt = f"""Analiza estos registros académicos que contienen múltiples periodos (AP1, AP2, AP3, etc.):
+        prompt = f"""Analiza estos registros académicos con múltiples periodos (AP1, AP2, AP3, etc.):
         {csv_full_sample}
         
         TAREA:
         1. Identifica las 5 áreas ICFES (Matemáticas, Lectura Crítica, Ciencias Naturales, Sociales, Inglés).
         2. Calcula el puntaje promedio actual (normalizado a 0.0-5.0).
-        3. Realiza un DIAGNÓSTICO DE TENDENCIA: Compara los periodos (AP1, AP2...) y determina si el estudiante está mejorando, decayendo o si hay un bajón crítico en alguna materia específica en el último periodo reportado.
-        
+        3. Realiza un DIAGNÓSTICO DE TENDENCIA: Compara los periodos (AP1, AP2...) y determina la evolución. Usa viñetas para los puntos clave.
+        4. Genera datos para una gráfica de tendencia (promedio por área en cada periodo).
+
         Devuelve UNICAMENTE un JSON con esta estructura:
         {{
-            "tabla": [ 
-                {{"Área": "Matemáticas", "Puntaje": 4.2}},
-                ... (las 5 áreas)
-            ],
-            "diagnostico_master": "Un párrafo épico y técnico analizando las tendencias de los periodos y alertando sobre caídas de rendimiento."
+            "tabla": [ {{"Área": "Materia", "Puntaje": 4.2}}, ... ],
+            "diagnostico_master": "Texto con viñetas...",
+            "historico": [ {{"Periodo": "AP1", "Área": "Matemáticas", "Puntaje": 4.0}}, ... ]
         }}
         """
         response = st.session_state['model'].generate_content(prompt)
@@ -77,6 +77,7 @@ def procesar_adn_ia(file):
         data_packet = json.loads(json_clean)
         
         st.session_state['diagnostico_detallado'] = data_packet['diagnostico_master']
+        st.session_state['df_historico'] = pd.DataFrame(data_packet['historico'])
         
         adn_list = data_packet['tabla']
         mapeo = {"Matemáticas": "Peto", "Lectura Crítica": "Yelmo", "Ciencias Naturales": "Grebas", "Sociales y Ciudadanas": "Escudo", "Inglés": "Guantelete"}
@@ -96,7 +97,7 @@ def generar_mision_ia(area):
         return json.loads(re.sub(r'```json\s*|\s*```', '', res.text).strip())
     except: return None
 
-# --- 4. BARRA LATERAL (Conexión y Estadísticas del Clan) ---
+# --- 4. BARRA LATERAL (NO SE TOCA LA ENTRADA DE LLAVE) ---
 with st.sidebar:
     st.title("🦅 TITÁN ESTUDIANTE")
     with st.expander("🔑 LLAVE MAESTRA", expanded=True):
@@ -178,7 +179,7 @@ else:
         
         df = st.session_state['df_adn']
         if df is not None:
-            col1, col2 = st.columns([1, 1.2]) # Col 2 un poco más ancha para el diagnóstico
+            col1, col2 = st.columns([1, 1.2]) 
             
             with col1:
                 st.subheader("⚔️ Inventario de Armadura")
@@ -197,9 +198,15 @@ else:
 
             with col2:
                 st.subheader("🧠 Diagnóstico del Oráculo")
-                # NUEVO: MOSTRAR DIAGNÓSTICO DE TENDENCIAS
                 if st.session_state['diagnostico_detallado']:
                     st.markdown(f"<div class='diagnostico-caja'>{st.session_state['diagnostico_detallado']}</div>", unsafe_allow_html=True)
+
+                # --- NUEVA GRÁFICA DE TENDENCIA ---
+                if st.session_state['df_historico'] is not None:
+                    st.markdown("#### 📈 Evolución por Periodos")
+                    fig_trend = px.line(st.session_state['df_historico'], x="Periodo", y="Puntaje", color="Área", markers=True)
+                    fig_trend.update_layout(plot_bgcolor="white", paper_bgcolor="rgba(0,0,0,0)", height=300)
+                    st.plotly_chart(fig_trend, use_container_width=True)
 
                 vulnerables = df[df['Puntaje'] < 3.8]
                 if not vulnerables.empty:

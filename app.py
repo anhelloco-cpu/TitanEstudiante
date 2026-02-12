@@ -36,10 +36,11 @@ st.markdown("""
         font-size: 1.1em; line-height: 1.6;
     }
 
+    /* Caja de diagnóstico organizada */
     .diagnostico-caja {
-        background-color: #f0f2f6; border-radius: 10px; padding: 20px;
-        border-left: 5px solid #2b2d33; margin-bottom: 20px; font-size: 0.95em;
-        line-height: 1.5;
+        background-color: #f8fafc; border-radius: 12px; padding: 20px;
+        border: 1px solid #e2e8f0; border-left: 6px solid #1e293b;
+        margin-bottom: 20px; font-size: 1em; line-height: 1.6;
     }
 
     .alerta-daño { color: #ff4b4b; font-weight: bold; animation: pulse 1.5s infinite; }
@@ -49,32 +50,33 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. FUNCIONES DE IA (Cerebro del Titán con Análisis de Tendencias) ---
+# --- 3. FUNCIONES DE IA (Análisis de Periodos y Misión) ---
 def procesar_adn_ia(file):
     if 'model' not in st.session_state: return None
     try:
         df_raw = pd.read_excel(file)
-        csv_full_sample = df_raw.head(40).to_csv(index=False)
+        csv_full_sample = df_raw.head(50).to_csv(index=False)
         
-        prompt = f"""Analiza estos registros académicos con múltiples periodos (AP1, AP2, AP3, etc.):
+        prompt = f"""Analiza estos registros académicos con múltiples periodos (AP1, AP2, AP3, AP4):
         {csv_full_sample}
         
         TAREA:
         1. Identifica las 5 áreas ICFES (Matemáticas, Lectura Crítica, Ciencias Naturales, Sociales, Inglés).
-        2. Calcula el puntaje promedio actual (normalizado a 0.0-5.0).
-        3. Realiza un DIAGNÓSTICO DE TENDENCIA: Compara los periodos (AP1, AP2...) y determina la evolución. Usa viñetas para los puntos clave.
-        4. Genera datos para una gráfica de tendencia (promedio por área en cada periodo).
+        2. Calcula el promedio actual (normalizado a 0.0-5.0).
+        3. Realiza un DIAGNÓSTICO DE TENDENCIA organizado con iconos (📈, ⚠️, ✅). Analiza el progreso entre AP1 y el último periodo.
+        4. Genera datos para una gráfica de tendencia (Puntaje por Área en cada Periodo).
 
-        Devuelve UNICAMENTE un JSON con esta estructura:
+        Devuelve UNICAMENTE un JSON con esta estructura exacta:
         {{
-            "tabla": [ {{"Área": "Materia", "Puntaje": 4.2}}, ... ],
-            "diagnostico_master": "Texto con viñetas...",
+            "tabla": [ {{"Área": "Matemáticas", "Puntaje": 4.2}}, ... ],
+            "diagnostico_master": "Texto organizado con iconos y saltos de línea...",
             "historico": [ {{"Periodo": "AP1", "Área": "Matemáticas", "Puntaje": 4.0}}, ... ]
         }}
         """
         response = st.session_state['model'].generate_content(prompt)
-        json_clean = re.sub(r'```json\s*|\s*```', '', response.text).strip()
-        data_packet = json.loads(json_clean)
+        # Limpieza de JSON por si la IA agrega texto
+        match = re.search(r'\{.*\}', response.text, re.DOTALL)
+        data_packet = json.loads(match.group())
         
         st.session_state['diagnostico_detallado'] = data_packet['diagnostico_master']
         st.session_state['df_historico'] = pd.DataFrame(data_packet['historico'])
@@ -86,18 +88,21 @@ def procesar_adn_ia(file):
             i["Estado"] = "Oro" if i["Puntaje"] >= 4.5 else "Plata" if i["Puntaje"] >= 3.8 else "Bronce"
             i["Salud"] = int((i["Puntaje"] / 5) * 100)
         return pd.DataFrame(adn_list)
-    except: return None
+    except Exception as e:
+        st.error(f"Error en el Oráculo: {e}")
+        return None
 
 def generar_mision_ia(area):
-    prompt = f"""Genera un caso de análisis tipo ICFES Saber 11 para {area}.
+    prompt = f"""Genera un caso de análisis tipo ICFES para {area}.
     Luego genera 3 preguntas de selección múltiple basadas en ese caso.
     Devuelve un JSON puro: {{ "caso": "texto...", "preguntas": [ {{"enunciado": "...", "opciones": {{"A":"...", "B":"...", "C":"...", "D":"..."}}, "correcta": "letra"}}, ... ] }}"""
     try:
         res = st.session_state['model'].generate_content(prompt)
-        return json.loads(re.sub(r'```json\s*|\s*```', '', res.text).strip())
+        match = re.search(r'\{.*\}', res.text, re.DOTALL)
+        return json.loads(match.group())
     except: return None
 
-# --- 4. BARRA LATERAL (NO SE TOCA LA ENTRADA DE LLAVE) ---
+# --- 4. BARRA LATERAL (LLAVE MAESTRA INTACTA) ---
 with st.sidebar:
     st.title("🦅 TITÁN ESTUDIANTE")
     with st.expander("🔑 LLAVE MAESTRA", expanded=True):
@@ -174,7 +179,7 @@ else:
 
     if archivo:
         if st.session_state['df_adn'] is None:
-            with st.spinner("Analizando ADN y Tendencias históricas..."):
+            with st.spinner("Analizando ADN y Tendencias..."):
                 st.session_state['df_adn'] = procesar_adn_ia(archivo)
         
         df = st.session_state['df_adn']
@@ -201,11 +206,11 @@ else:
                 if st.session_state['diagnostico_detallado']:
                     st.markdown(f"<div class='diagnostico-caja'>{st.session_state['diagnostico_detallado']}</div>", unsafe_allow_html=True)
 
-                # --- NUEVA GRÁFICA DE TENDENCIA ---
+                # --- GRÁFICA DE TENDENCIA POR PERIODOS ---
                 if st.session_state['df_historico'] is not None:
                     st.markdown("#### 📈 Evolución por Periodos")
                     fig_trend = px.line(st.session_state['df_historico'], x="Periodo", y="Puntaje", color="Área", markers=True)
-                    fig_trend.update_layout(plot_bgcolor="white", paper_bgcolor="rgba(0,0,0,0)", height=300)
+                    fig_trend.update_layout(plot_bgcolor="white", paper_bgcolor="rgba(0,0,0,0)", height=300, yaxis_range=[0,5.2])
                     st.plotly_chart(fig_trend, use_container_width=True)
 
                 vulnerables = df[df['Puntaje'] < 3.8]
@@ -213,9 +218,9 @@ else:
                     mas_debil = vulnerables.loc[vulnerables['Puntaje'].idxmin()]
                     for _, row in vulnerables.iterrows():
                         if row['Área'] == mas_debil['Área']:
-                            st.error(f"🚨 **PRIORIDAD:** Tu {row['Pieza']} ({row['Área']}) requiere forja urgente.")
+                            st.error(f"🚨 **PRIORIDAD:** Tu {row['Pieza']} requiere forja urgente.")
                         else:
-                            st.warning(f"⚠️ **VULNERABLE:** Tu {row['Pieza']} ({row['Área']}) tiene fisuras.")
+                            st.warning(f"⚠️ **VULNERABLE:** Tu {row['Pieza']} tiene fisuras.")
                     
                     st.divider()
                     st.subheader("⚒️ Taller de Mentores")

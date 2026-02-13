@@ -6,7 +6,7 @@ import json
 import re
 
 # 1. --- CONFIGURACIÓN DE LA PÁGINA ---
-st.set_page_config(page_title="TITÁN ESTUDIANTE v116", layout="wide", page_icon="🛡️")
+st.set_page_config(page_title="TITÁN ESTUDIANTE v117", layout="wide", page_icon="🛡️")
 
 # Inicializar estados de persistencia
 if 'view' not in st.session_state: st.session_state['view'] = 'dashboard'
@@ -18,55 +18,99 @@ if 'mision_data' not in st.session_state: st.session_state['mision_data'] = None
 if 'progreso_mision' not in st.session_state:
     st.session_state.progreso_mision = {'idx': 0, 'correctas': 0, 'terminada': False}
 if 'area_reparar' not in st.session_state: st.session_state.area_reparar = ""
-# Nuevos estados para la Mesa de Crisis
 if 'simulacion_completada' not in st.session_state: st.session_state.simulacion_completada = False
 if 'reaccion_npc' not in st.session_state: st.session_state.reaccion_npc = ""
 
-# --- 2. ESTILOS VISUALES (Fondo Blanco y Estética Profesional) ---
+# --- 2. ESTILOS VISUALES (Diseño Futurista Neo-Titán) ---
 st.markdown("""
 <style>
-    .stApp { background-color: #ffffff; color: #2b2d33; }
-    [data-testid="stSidebar"] { background-color: #f8f9fa; border-right: 1px solid #eee; }
+    /* Fondo con textura tecnológica sutil */
+    .stApp { 
+        background: radial-gradient(circle at top right, #ffffff, #f1f5f9); 
+        color: #1e293b; 
+    }
     
+    /* Barra lateral estilo Centro de Mando */
+    [data-testid="stSidebar"] { 
+        background-color: #0f172a !important; 
+        border-right: 2px solid #334155;
+    }
+    [data-testid="stSidebar"] * { color: #f1f5f9 !important; }
+
+    /* Glassmorphism en Métricas con borde de luz */
     div[data-testid="stMetric"] {
-        background-color: #ffffff; border: 1px solid #d1d5db;
-        padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+    }
+    div[data-testid="stMetric"]:hover { 
+        transform: translateY(-5px); 
+        border-color: #d4af37;
+        box-shadow: 0 15px 30px -5px rgba(212, 175, 55, 0.2);
     }
 
-    .pergamino {
-        background-color: #fffcf5; color: #2b2d33; padding: 25px;
-        border: 1px solid #d4af37; border-left: 8px solid #d4af37;
-        border-radius: 10px; font-family: 'Georgia', serif; margin-bottom: 25px;
-        font-size: 1.1em; line-height: 1.6;
-    }
-
+    /* Caja de Resumen "Dark Tech" */
     .resumen-caja {
-        background-color: #f8fafc; border-radius: 12px; padding: 20px;
-        border: 1px solid #e2e8f0; border-left: 6px solid #d4af37;
-        margin-bottom: 15px; font-size: 1.1em; line-height: 1.6;
-        color: #1e293b; font-weight: 500;
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border-radius: 20px;
+        padding: 25px;
+        border-left: 10px solid #d4af37;
+        color: #f8fafc;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        margin-bottom: 20px;
     }
 
-    .diagnostico-full {
-        font-size: 1em; line-height: 1.8; color: #334155;
-        white-space: pre-wrap;
+    /* Pergaminos y diálogos estilo HUD */
+    .pergamino, .npc-dialogo {
+        background: #ffffff;
+        padding: 30px;
+        border-radius: 24px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        position: relative;
+    }
+    .npc-dialogo::before {
+        content: "PROTOCOL: ACTIVE";
+        position: absolute;
+        top: 10px;
+        right: 20px;
+        font-size: 0.7em;
+        color: #3b82f6;
+        font-weight: bold;
     }
 
-    /* Estilo para el Simulador NPC */
-    .npc-dialogo {
-        background-color: #f1f5f9; padding: 25px; border-radius: 15px;
-        border: 1px solid #cbd5e1; margin-bottom: 20px;
-        font-style: italic; color: #334155; font-size: 1.1em;
+    /* Botones con pulso de energía */
+    .stButton>button {
+        background: #1e293b !important;
+        color: #ffffff !important;
+        border-radius: 14px !important;
+        border: 1px solid #334155 !important;
+        padding: 12px 28px !important;
+        font-weight: 700 !important;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    }
+    .stButton>button:hover {
+        background: #d4af37 !important;
+        color: #0f172a !important;
+        box-shadow: 0 0 20px rgba(212, 175, 55, 0.5) !important;
+        border-color: #f59e0b !important;
     }
 
-    .alerta-daño { color: #ff4b4b; font-weight: bold; animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-    
-    .stButton>button { border-radius: 8px; font-weight: bold; transition: all 0.3s; }
+    /* Barras de progreso futuristas */
+    .stProgress > div > div > div > div {
+        background: linear-gradient(90deg, #d4af37 0%, #f59e0b 100%) !important;
+        border-radius: 10px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. FUNCIONES DE IA (Cerebro del Titán con Mesa de Crisis) ---
+# --- 3. FUNCIONES DE IA (Lógica Original Protegida) ---
 def procesar_adn_ia(file):
     if 'model' not in st.session_state: return None
     try:
@@ -177,7 +221,6 @@ if st.session_state['view'] == 'mision' and st.session_state['mision_data']:
     
     if not st.session_state.simulacion_completada:
         st.subheader("📁 Tu Maletín de Evidencia")
-        st.info("Elige la fuente más precisa para responder al desafío:")
         
         for i, item in enumerate(data['maletin']):
             if st.button(f"📄 {item['fuente']}: {item['detalle']}", key=f"btn_evidencia_{i}", use_container_width=True):
@@ -190,12 +233,12 @@ if st.session_state['view'] == 'mision' and st.session_state['mision_data']:
         
         if st.session_state.simulacion_completada == "exito":
             st.balloons()
-            st.success("🛡️ **¡CRISIS EVITADA!** La pieza de tu armadura ha sido reparada con éxito.")
+            st.success("🛡️ **¡CRISIS EVITADA!** La pieza ha sido reparada.")
             df = st.session_state.df_adn
             idx = df[df['Área'] == st.session_state.area_reparar].index
             df.loc[idx, ['Puntaje', 'Estado', 'Salud']] = [4.8, "Oro", 96]
         else:
-            st.error("🏚️ **FRACASO EN LA MISIÓN.** Tu elección no fue lo suficientemente técnica para salvar la situación.")
+            st.error("🏚️ **FRACASO EN LA MISIÓN.**")
             
         if st.button("VOLVER AL DASHBOARD"):
             st.session_state.view = 'dashboard'
@@ -221,15 +264,15 @@ else:
                 st.subheader("⚔️ Inventario de Armadura")
                 for _, row in df.iterrows():
                     es_bronce = row['Estado'] == "Bronce"
-                    c_txt = "#ff4b4b" if es_bronce else "#2b2d33"
+                    c_txt = "#ff4b4b" if es_bronce else "#1e293b"
                     label = "¡DAÑADA!" if es_bronce else row['Estado']
                     st.markdown(f"<span style='color:{c_txt}; font-weight:bold;'>{row['Pieza']}</span> ({row['Área']}): {row['Puntaje']} | {label}", unsafe_allow_html=True)
                     st.progress(row['Salud'] / 100)
                 
                 st.divider()
                 fig = px.line_polar(df, r='Puntaje', theta='Área', line_close=True, range_r=[0,5])
-                fig.update_traces(fill='toself', line_color="#d4af37")
-                fig.update_layout(polar=dict(bgcolor="white"), paper_bgcolor="rgba(0,0,0,0)")
+                fig.update_traces(fill='toself', line_color="#d4af37", line_width=2)
+                fig.update_layout(polar=dict(bgcolor="rgba(255,255,255,0.5)"), paper_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig, use_container_width=True)
 
             with col2:
